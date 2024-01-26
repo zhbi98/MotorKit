@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "3rd_Connector_Generic")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/symbols/3rd_Connector_Generic.kicad_sym")(options "")(descr ""))
+)

@@ -1,0 +1,12 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "3rd_Connector_USB_SMD")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Connector_USB_SMD.pretty")(options "")(descr ""))
+  (lib (name "3rd_Connector_AMASS")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Connector_AMASS.pretty")(options "")(descr ""))
+  (lib (name "3rd_Package_DFN(TDSON)")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Package_DFN(TDSON).pretty")(options "")(descr ""))
+  (lib (name "3rd_Connector_JST_SMD")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Connector_JST_SMD.pretty")(options "")(descr ""))
+  (lib (name "3rd_Package_SOP")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Package_SOP.pretty")(options "")(descr ""))
+  (lib (name "3rd_Button_Switch_SMD")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Button_Switch_SMD.pretty")(options "")(descr ""))
+  (lib (name "3rd_Interface_UART")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Interface_UART.pretty")(options "")(descr ""))
+  (lib (name "3rd_Interface_CAN")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Interface_CAN.pretty")(options "")(descr ""))
+  (lib (name "3rd_Connector_Wire")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Connector_Wire.pretty")(options "")(descr ""))
+)
