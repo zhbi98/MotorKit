@@ -64,8 +64,8 @@
       39,
       40
     ],
-    "visible_layers": "fffffff_ffffffff",
-    "zone_display_mode": 0
+    "visible_layers": "ffc1e0b_ffffffff",
+    "zone_display_mode": 1
   },
   "meta": {
     "filename": "AS5047P.kicad_prl",

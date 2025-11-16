@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "3rd_Connector_JST_SMD")(type "KiCad")(uri "${KIPRJMOD}/../kicad-libs/footprints/3rd_Connector_JST_SMD.pretty")(options "")(descr ""))
+)
