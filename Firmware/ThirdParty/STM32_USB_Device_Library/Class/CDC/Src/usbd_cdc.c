@@ -623,7 +623,7 @@ static uint8_t USBD_CDC_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
   NAKed till the end of the application Xfer */
   if(pdev->pClassData != NULL)
   {
-    ((USBD_CDC_ItfTypeDef *)pdev->pUserData)->Receive(NULL, &hEP_Rx->Length, epnum);
+    ((USBD_CDC_ItfTypeDef *)pdev->pUserData)->Receive(/*NULL*/hEP_Rx->Buffer, &hEP_Rx->Length, epnum); /*Modify by zhbi98*/
 
     return USBD_OK;
   }
@@ -785,15 +785,36 @@ uint8_t USBD_CDC_TransmitPacket(USBD_HandleTypeDef *pdev, uint8_t* buf, size_t l
   */
 uint8_t USBD_CDC_ReceivePacket(USBD_HandleTypeDef *pdev, uint8_t* buf, uint16_t len, uint8_t endpoint_num)
 {
+  USBD_CDC_HandleTypeDef   *hcdc = (USBD_CDC_HandleTypeDef*) pdev->pClassData;
+
+/*----------- Modify by zhbi98 ---------------------*/
   /* Suspend or Resume USB Out process */
   if(pdev->pClassData != NULL)
   {
+    // Select Endpoint
+    USBD_CDC_EP_HandleTypeDef* hEP_Rx;
+    uint8_t out_ep;
+    if (endpoint_num == CDC_OUT_EP) {
+        hEP_Rx = &hcdc->CDC_Rx;
+        out_ep = CDC_OUT_EP;
+    } else if (endpoint_num == ODRIVE_OUT_EP) {
+        hEP_Rx = &hcdc->ODRIVE_Rx;
+        out_ep = ODRIVE_OUT_EP;
+    } else {
+        return USBD_FAIL;
+    }
+
+    if (hEP_Rx != NULL) {
+      hEP_Rx->Buffer = buf;   /* ensure DataOut sees the correct buffer */
+      hEP_Rx->Length = 0;     /* clear previous length */
+    }
+
     /* Prepare Out endpoint to receive next packet */
     USBD_LL_PrepareReceive(pdev,
-                            endpoint_num,
-                            buf,
-                            len);
-    
+                            out_ep,
+                            hEP_Rx->Buffer,
+                            pdev->dev_speed == USBD_SPEED_HIGH ? CDC_DATA_HS_OUT_PACKET_SIZE : CDC_DATA_FS_OUT_PACKET_SIZE);
+/*--------------------------------------------------*/
     return USBD_OK;
   }
   else
