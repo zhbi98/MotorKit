@@ -218,7 +218,7 @@ static void usb_server_thread(void * ctx) {
 }
 
 // Called from CDC_Receive_FS callback function, this allows the communication
-// thread to handle the incoming data
+// thread to handle the incoming data, endpoint_pair 端点对
 void usb_rx_process_packet(uint8_t *buf, uint32_t len, uint8_t endpoint_pair) {
     if (endpoint_pair == CDC_OUT_EP && usb_cdc_rx_stream.rx_end_) {
         usb_cdc_rx_stream.rx_end_ += len;

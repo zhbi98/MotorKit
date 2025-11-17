@@ -75,7 +75,6 @@ public:
     bool run_hall_phase_calibration();
     bool run_offset_calibration();
     void sample_now();
-    bool read_sampled_gpio(Stm32Gpio gpio);
     void decode_hall_samples();
     int32_t hall_model(float internal_pos);
     bool update();

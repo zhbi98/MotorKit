@@ -21,8 +21,9 @@ bool Encoder::apply_config(ODriveIntf::MotorIntf::MotorType motor_type) {
 
     update_pll_gains();
 
-    /*pre_calibrated 如果为 True，这意味着配置中存储的偏移量是有效的，无需通过 run_offset_calibration 来确定。
-    在这种情况下，编码器将在找到索引（index）后立即进入准备状态。*/
+    /*pre_calibrated 如果为 True，这意味着配置中存储的偏移量是有效的，
+    无需通过 run_offset_calibration 来确定。在这种情况下，编码器将在
+    找到索引（index）后立即进入准备状态。*/
     if (config_.pre_calibrated) {
         if (config_.mode == Encoder::MODE_HALL && config_.hall_polarity_calibrated)
             is_ready_ = true;
@@ -46,7 +47,7 @@ void Encoder::setup() {
         abs_spi_dma_tx_[0] = 0x0000;
     }
 
-    /*MODE_FLAG_ABS 是一类编码器的掩码，表示绝对编码器模式（如 SPI、SSI 等）*/
+    /*MODE_FLAG_ABS 表示使用绝对编码器*/
     if(mode_ & MODE_FLAG_ABS){
         abs_spi_cs_pin_init();
 
@@ -71,11 +72,8 @@ bool Encoder::do_checks(){
 // Hardware Dependent
 //--------------------
 
-/**
- * 在 ODrive 的 Encoder::enc_index_cb() 函数是一个回调函数，
- * 当编码器检测到索引（Index）信号时会被调用。这个函数主要处理与编码器索引信号
- * 相关的计数器和状态更新。
- */
+/**编码器索引（Index）中断回调函数，检测到索引信号时会被调用。
+ * 这个函数主要处理与编码器索引信号相关的计数器和状态更新。*/
 // Triggered when an encoder passes over the "Index" pin
 // TODO: only arm index edge interrupt when we know encoder has powered up
 // (maybe by attaching the interrupt on start search, synergistic with following)
@@ -88,9 +86,9 @@ void Encoder::enc_index_cb() {
         set_circular_count(0, false);
         if (config_.use_index_offset)
             /*捕获到 Index 脉冲，将编码器的 "循环计数" linear count 清零。
-            计算方式是将配置中的索引偏移值 index_offset 乘以编码器每转脉冲数 CPR。
-            对于线性计数每次捕获到索引信号时，把计数设置为预设的偏移量，
-            有偏移量那么零点就是预设的固定偏移量。*/
+            计算方式是将配置中的索引偏移值 index_offset 乘以编码器每转脉
+            冲数 CPR。对于线性计数每次捕获到索引信号时，把计数设置为预设的
+            偏移量，有偏移量那么零点就是预设的固定偏移量。*/
             set_linear_count((int32_t)(config_.index_offset * config_.cpr));
         if (config_.pre_calibrated) {
             is_ready_ = true;
@@ -99,10 +97,13 @@ void Encoder::enc_index_cb() {
             }
         } else {
             /*我们不能在 set_circular_count 使用 update_offset，
-            因为我们还在有机会更新之前设置线性计数。因此使 Index 搜索之前可能发生的偏移校准失效*/
-            // We can't use the update_offset facility in set_circular_count because
-            // we also set the linear count before there is a chance to update. Therefore:
-            // Invalidate offset calibration that may have happened before idx search
+            因为我们还在有机会更新之前设置线性计数。因此使 Index 
+            搜索之前可能发生的偏移校准失效*/
+            // We can't use the update_offset facility in 
+            // set_circular_count because we also set the linear 
+            // count before there is a chance to update. 
+            // Therefore:Invalidate offset calibration that may 
+            // have happened before idx search
             is_ready_ = false;
         }
         index_found_ = true;
@@ -129,10 +130,12 @@ void Encoder::set_idx_subscribe(bool override_enable) {
 }
 
 void Encoder::update_pll_gains() {
-    pll_kp_ = 2.0f * config_.bandwidth;  // basic conversion to discrete time（比例项，控制响应速度）
-    pll_ki_ = 0.25f * (pll_kp_ * pll_kp_); // Critically damped（积分项，增强低频响应，0.25 倍平方来自临界阻尼（critically damped）二阶系统设计）
+    // 比例项，控制响应速度
+    pll_kp_ = 2.0f * config_.bandwidth;  // basic conversion to discrete time
+    // 积分项，增强低频响应，0.25 倍平方来自临界阻尼（critically damped）二阶系统设计
+    pll_ki_ = 0.25f * (pll_kp_ * pll_kp_); // Critically damped
 
-    /*防止数值不稳定。由于是离散系统，T * Kp < 1 近似等价于采样时间太大或带宽太高将导致离散控制器发散。*/
+    /*由于是离散系统，T * Kp < 1 近似等价于采样时间太大或带宽太高将导致离散控制器发散。*/
     // Check that we don't get problems with discrete time approximation
     if (!(current_meas_period * pll_kp_ < 1.0f)) {
         set_error(ERROR_UNSTABLE_GAIN);
@@ -141,7 +144,8 @@ void Encoder::update_pll_gains() {
 
 /*检查设备是否已经校准*/
 void Encoder::check_pre_calibrated() {
-    // TODO: restoring config from python backup is fragile here (ACIM motor type must be set first)
+    // TODO: restoring config from python backup is fragile here 
+    // (ACIM motor type must be set first)
     if (axis_->motor_.config_.motor_type != Motor::MOTOR_TYPE_ACIM) {
         if (!is_ready_)
             config_.pre_calibrated = false;
@@ -161,7 +165,7 @@ void Encoder::set_linear_count(int32_t count) {
     /*tim_cnt_sample_：指的是利用定时中断定时更新采集的编码器统计数*/
     tim_cnt_sample_ = count;
 
-    // 最后将值更新到硬件中：因为 tim_cnt_sample_ 和 timer_->Instance->CNT 是同步的，所以要同时置为相同值 count
+    //因为 tim_cnt_sample_ 和 CNT 需要同步，所以要更新到 TIM
     //Write hardware last
     timer_->Instance->CNT = count;
 
@@ -169,21 +173,15 @@ void Encoder::set_linear_count(int32_t count) {
 }
 
 /**
- * ODrive 为何需要循环计数？
- * 
- * 在电机控制中，循环计数（circular count）是一个重要的概念，主要用于跟踪电机编码器输出的位置信息。
- * 编码器每转会产生一定数量的脉冲，通过累计这些脉冲的数量，可以精确地确定电机轴的绝对位置。
- * 在 ODrive 中，循环计数的作用包括：1. 位置追踪： 编码器的循环计数记录了电机从一个索引（Index）信号出现
- * 到另一个索引信号出现之间转过的圈数。这样就可以实时知道电机转子相对于初始位置的具体位置，
- * 这对于闭环控制系统至关重要。2. 防止数值溢出： 随着电机转动，编码器产生的脉冲数会不断累积。
- * 为了避免32位或更高位宽的计数器因超过其最大值而导致溢出问题，使用循环计数方法可以在达到最大值时自动回绕至最小值，
- * 并继续累加，从而维持连续且准确的位置跟踪。3. 绝对定位与参考点更新： 当编码器检测到索引信号（通常是一次性的高电平脉冲）时，
- * 系统可以通过重置循环计数并结合索引偏移量进行绝对位置校准。这有助于确保每次找到索引信号时，
- * 都能够恢复到已知的基准位置，这对于实现精确的零点回归、多圈定位以及初始化阶段的位置识别都极为重要。
- * 4. 抗干扰与稳定性： 循环计数还可以帮助系统在受到噪声、丢包等干扰时保持稳定的电机位置估计，
- * 通过算法处理可以纠正短时间内的位置误差，提高系统的整体性能和可靠性。
+ * 为何需要循环计数？
+ * 循环计数（circular count）主要用于跟踪电机编码器输出的位置信息。
+ * 编码器每转会产生一定数量的脉冲，通过累计这些脉冲的数量，
+ * 可以精确地确定电机轴的绝对位置（编码器的循环计数记录了电机从一个索引（Index）
+ * 信号出现到另一个索引信号出现之间转过的圈数）。
+ * 当编码器检测到索引信号（通常是一次性的高电平脉冲）时，系统可以通过重置
+ * 循环计数并结合索引偏移量进行绝对位置校准。这有助于确保每次找到索引信号时，
+ * 都能够恢复到已知的基准位置，实现精确的零点回归、多圈定位。
  */
-
 // Function that sets the CPR circular tracking encoder count to a desired 32-bit value.
 // Note that this will get mod'ed down to [0, cpr)
 void Encoder::set_circular_count(int32_t count, bool update_offset) {
@@ -191,9 +189,11 @@ void Encoder::set_circular_count(int32_t count, bool update_offset) {
     uint32_t prim = cpu_enter_critical();
 
     if (update_offset) {
-        /*count - count_in_cpr_ 表示当前位置与上一次位置的差值,加到当前 offset 上去，就相当于把原始测量值重新对齐到这个 count 上*/
+        /*count - count_in_cpr_ 表示当前位置与上一次位置的差值,
+        加到当前 offset 上去，就相当于把原始测量值重新对齐到这个 count 上*/
         config_.phase_offset += count - count_in_cpr_;
-        config_.phase_offset = mod(config_.phase_offset, config_.cpr); /*最后对 offset 做模运算，确保它始终在 [0, cpr) 范围内。*/
+        /*最后对 offset 做模运算，确保它始终在 [0, cpr) 范围内。*/
+        config_.phase_offset = mod(config_.phase_offset, config_.cpr);
     }
 
     // Update states
@@ -541,7 +541,8 @@ void Encoder::sample_now() {
             // do nothing: samples already captured in general GPIO capture
         } break;
 
-        case MODE_SINCOS: { /*正弦/余弦模拟信号编码器，填写 ADC 通道号*/
+        case MODE_SINCOS: { 
+            /*正弦/余弦模拟信号编码器，填写 ADC 通道号*/
             sincos_sample_s_ = get_adc_relative_voltage_ch(2); /*GPIOA, GPIO_PIN_2*/
             sincos_sample_c_ = get_adc_relative_voltage_ch(3); /*GPIOA, GPIO_PIN_3*/
         } break;
@@ -563,25 +564,16 @@ void Encoder::sample_now() {
     }
 
     // Sample all GPIO digital input data registers, used for HALL sensors for example.
-    for (size_t i = 0; i < sizeof(ports_to_sample) / sizeof(ports_to_sample[0]); ++i) {
-        port_samples_[i] = ports_to_sample[i]->IDR;
-    }
-}
-
-bool Encoder::read_sampled_gpio(Stm32Gpio gpio) {
-    for (size_t i = 0; i < sizeof(ports_to_sample) / sizeof(ports_to_sample[0]); ++i) {
-        if (ports_to_sample[i] == gpio.port_) {
-            return port_samples_[i] & gpio.pin_mask_;
-        }
-    }
-    return false;
+    // for (size_t i = 0; i < sizeof(ports_to_sample) / sizeof(ports_to_sample[0]); ++i) {
+    //     port_samples_[i] = ports_to_sample[i]->IDR;
+    // }
 }
 
 /*读取霍尔传感器采样的三位二进制数*/
 void Encoder::decode_hall_samples() {
-    hall_state_ = (read_sampled_gpio(hallA_gpio_) ? 1 : 0)
-                | (read_sampled_gpio(hallB_gpio_) ? 2 : 0)
-                | (read_sampled_gpio(hallC_gpio_) ? 4 : 0);
+    hall_state_ = ((hallA_gpio_.read()) ? 1 : 0)
+                | ((hallB_gpio_.read()) ? 2 : 0)
+                | ((hallC_gpio_.read()) ? 4 : 0);
 }
 
 bool Encoder::abs_spi_start_transaction() {
@@ -606,15 +598,6 @@ bool Encoder::abs_spi_start_transaction() {
     return true;
 }
 
-/**
- * 绝对值编码器 SPI 数据读取与解析 的核心逻辑。它涵盖了对 AMS, CUI, 和 RLS 三种 SPI 绝对编码器的支持，
- * 并在 DMA 读取完成回调中解析位置值、校验奇偶性、更新内部状态。
- * 支持的编码器类型：
- * AMS（如 AS5047P）：需要偶校验 + 错误标志判断
- * CUI（如 AMT21）：需要特殊方式奇偶校验（返回 ~v & 3）
- * RLS（如 RM44）：无校验，右移2位获得有效数据
- */
-
 /*经典的位运算方式，用于快速求 16 位值的奇偶校验（返回 1 表示奇数个 1）*/
 uint8_t ams_parity(uint16_t v) {
     v ^= v >> 8;
@@ -632,6 +615,8 @@ uint8_t cui_parity(uint16_t v) {
     return ~v & 3;
 }
 
+/**绝对值编码器 SPI 数据读取与解析 的核心逻辑。它涵盖了对 AMS, CUI, 和 RLS 三种
+SPI 绝对编码器的支持，并在 DMA 读取完成回调中解析位置值、校验奇偶性、更新内部状态。*/
 void Encoder::abs_spi_cb(bool success) {
     uint16_t pos;
 
@@ -647,7 +632,7 @@ void Encoder::abs_spi_cb(bool success) {
                 goto done;
             }
             /*第 14 位是 错误标志（1 = error) 第 15 位是 偶校验 低 14 位是实际角度*/
-            pos = rawVal & 0x3fff;
+            pos = rawVal & 0x3FFF;
         } break;
 
         case MODE_SPI_ABS_CUI: {
@@ -657,18 +642,18 @@ void Encoder::abs_spi_cb(bool success) {
                 goto done;
             }
             /*低 14 位为角度值，其余为奇偶校验*/
-            pos = rawVal & 0x3fff;
+            pos = rawVal & 0x3FFF;
         } break;
 
         case MODE_SPI_ABS_RLS: {
             uint16_t rawVal = abs_spi_dma_rx_[0];
             /*数据右移两位，直接取中间 14 位为角度*/
-            pos = (rawVal >> 2) & 0x3fff;
+            pos = (rawVal >> 2) & 0x3FFF;
         } break;
 
         case MODE_SPI_ABS_MA732: {
             uint16_t rawVal = abs_spi_dma_rx_[0];
-            pos = (rawVal >> 2) & 0x3fff;
+            pos = (rawVal >> 2) & 0x3FFF;
         } break;
 
         default: {
@@ -727,9 +712,7 @@ bool Encoder::update() {
         case MODE_INCREMENTAL: {
             //TODO: use count_in_cpr_ instead as shadow_count_ can overflow
             //or use 64 bit
-
             /*tim_cnt_sample_ 指的是利用定时中断定时更新采集的编码器统计数*/
-
             int16_t delta_enc_16 = (int16_t)tim_cnt_sample_ - (int16_t)shadow_count_;
             delta_enc = (int32_t)delta_enc_16; //sign extend
         } break;
@@ -851,14 +834,17 @@ bool Encoder::update() {
     // Memory for pos_circular
     float pos_cpr_counts_last = pos_cpr_counts_;
 
-    /*使用一个 简化的一阶数字 PLL（锁相环）结构，核心任务是：利用 编码器读数（离散跳变）估算 连续相位，利用估算相位变化量，推算 电机的角速度。*/
+    /*使用一个 简化的一阶数字 PLL（锁相环）结构，核心任务是：利用 编码器读数（离散跳变）估算 连续相位，
+    利用估算相位变化量，推算 电机的角速度。*/
 
     /*锁相环 PLL 滤波器：用于平滑位置和速度估计，关键参数为 pll_kp_、pll_ki_。*/
     /*如果速度估计很小，还会自动 snap 到 0，防止抖动。*/
     // run pll (for now pll is in units of encoder counts)
     // Predict current pos
-    pos_estimate_counts_ += current_meas_period * vel_estimate_counts_; /*整体位置估计（可能 > CPR，适合全局定位）*/
-    pos_cpr_counts_      += current_meas_period * vel_estimate_counts_; /*仅在 CPR 范围内的位置估计（周期性），用于电角度和控制*/
+    /*整体位置估计（可能 > CPR，适合全局定位）*/
+    pos_estimate_counts_ += current_meas_period * vel_estimate_counts_;
+    /*仅在 CPR 范围内的位置估计（周期性），用于电角度和控制*/
+    pos_cpr_counts_      += current_meas_period * vel_estimate_counts_;
 
     /*注意上面 vel_estimate_counts_ 没有被赋予初始值，所以默认为 0，
     不赋予初始值是因为它可以随着时间的推移通过和实际值的误差积分逐渐的逼近正确值*/
@@ -872,15 +858,19 @@ bool Encoder::update() {
             即将数字舍去小数部分，返回小于或等于该数的最大整数值。*/
             return (int32_t)std::floor(internal_pos);
     };
-    // discrete phase detector 即离散相位检波器（计算实际 shadow_count_，count_in_cpr_ 和各自估计值的差值）或理解为计算位置误差（离散检测器）:比较预测位置与实际编码器值的差值。
+    // discrete phase detector
+    // 即离散相位检波器（计算实际 shadow_count_，count_in_cpr_ 和各自估计值的差值）
+    // 或理解为计算位置误差（离散检测器）:比较预测位置与实际编码器值的差值。
     float delta_pos_counts = (float)(shadow_count_ - encoder_model(pos_estimate_counts_));
     float delta_pos_cpr_counts = (float)(count_in_cpr_ - encoder_model(pos_cpr_counts_));
 
     /*计算位置误差（离散检测器）:比较预测位置与实际编码器值的差值。*/
     delta_pos_cpr_counts = wrap_pm(delta_pos_cpr_counts, (float)(config_.cpr));
     delta_pos_cpr_counts_ += 0.1f * (delta_pos_cpr_counts - delta_pos_cpr_counts_); // for debug
-    /**wrap_pm() 使用 ARM 汇编语言实现的单精度浮点数到 32 位有符号整数的转换。它利用了ARM处理器中的向量浮点单元(VFP)提供的VCVT指令来进行类型转换。
-    在这里将 delta_pos_cpr_counts / (float)(config_.cpr) 的浮点结果转化为带符号的 32 位整数*/
+    /**wrap_pm() 使用 ARM 汇编语言实现的单精度浮点数到 32 位有符号整数的转换。
+    它利用了ARM处理器中的向量浮点单元(VFP)提供的VCVT指令来进行类型转换。
+    在这里将 delta_pos_cpr_counts / (float)(config_.cpr) 
+    的浮点结果转化为带符号的 32 位整数*/
 
     // pll feedback（PLL 反馈：修正位置和速度）
     /**这是典型的 PI 控制结构，模仿锁相环的思想：位置偏差->修正估计位置（P），
@@ -928,16 +918,19 @@ bool Encoder::update() {
         if (interpolation_ > 1.0f) interpolation_ = 1.0f;
         if (interpolation_ < 0.0f) interpolation_ = 0.0f;
     }
-    float interpolated_enc = corrected_enc + interpolation_; /*经过插值最后得到一个更平滑的 interpolated_enc 用于电角度等计算*/
+    /*经过插值最后得到一个更平滑的 interpolated_enc 用于电角度等计算*/
+    float interpolated_enc = corrected_enc + interpolation_;
 
     //// compute electrical phase
     //TODO avoid recomputing elec_rad_per_enc every time
     //用于在传感器模式下 SVM 对转子所在扇区的判断（编码器还用于闭环控制模式，闭环控制编码器值不要求弧度制）
 
-    /*elec_rad_per_enc 表示每个编码器计数对应的电角度（弧度），M_PI 用于将角度转换为弧度制表示，2*M_PI表示一圈的弧度（360°）。*/
-    /*电机每转一圈，电角度会转 pole_pairs 圈。例如，极对数为 7，则电机轴转一圈，电角度转 7 圈（转子转一圈，会经过 7 个 N 极 和 7 个 S 极）。
-    因为电机内部有定子绕组产生旋转磁场，转子有 N 个磁极（N-S 成对出现），每一对磁极（一个 N 和一个 S）构成一个完整的磁场周期，
-    所以当转子旋转时，每经过一对磁极，磁场就完成一个完整的周期变化（相当于电角度走完 360°）。*/
+    /*elec_rad_per_enc 表示每个编码器计数对应的电角度（弧度），M_PI 用于将角度转换为弧度制表示，
+    2*M_PI表示一圈的弧度（360°）。*/
+    /*电机每转一圈，电角度会转 pole_pairs 圈。例如，极对数为 7，则电机轴转一圈，电角度转 7 圈（转子转一圈，
+    会经过 7 个 N 极 和 7 个 S 极）。因为电机内部有定子绕组产生旋转磁场，转子有 N 个磁极（N-S 成对出现），
+    每一对磁极（一个 N 和一个 S）构成一个完整的磁场周期，所以当转子旋转时，每经过一对磁极，磁场就完成一个
+    完整的周期变化（相当于电角度走完 360°）。*/
     float elec_rad_per_enc = axis_->motor_.config_.pole_pairs * 2 * M_PI * (1.0f / (float)(config_.cpr));
     /*插值后的编码器计数减去相位偏移计数，乘以每个编码器计数对应的电角度（弧度），得到当前电角度（弧度）。*/
     float ph = elec_rad_per_enc * (interpolated_enc - config_.phase_offset_float);

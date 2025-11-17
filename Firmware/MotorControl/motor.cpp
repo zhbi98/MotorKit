@@ -6,8 +6,8 @@
 
 #include <algorithm>
 
-static constexpr auto CURRENT_ADC_LOWER_BOUND =        (uint32_t)((float)(1 << 12) * CURRENT_SENSE_MIN_VOLT / 3.3f);
-static constexpr auto CURRENT_ADC_UPPER_BOUND =        (uint32_t)((float)(1 << 12) * CURRENT_SENSE_MAX_VOLT / 3.3f);
+static constexpr auto CURRENT_ADC_LOWER_BOUND = (uint32_t)((float)(1 << 12) * CURRENT_SENSE_MIN_VOLT / 3.3f);
+static constexpr auto CURRENT_ADC_UPPER_BOUND = (uint32_t)((float)(1 << 12) * CURRENT_SENSE_MAX_VOLT / 3.3f);
 
 /**
  * @brief This control law adjusts the output voltage such that a predefined
@@ -239,21 +239,21 @@ void Motor::apply_pwm_timings(uint16_t timings[3], bool tentative) {
         TIM_HandleTypeDef* htim = timer_;
         TIM_TypeDef* tim = htim->Instance;
 
-        /**CCR 捕获/比较寄存器，该寄存器总共有 4 个 (TIMx_CCR1~4)，对应 4 个输通道 CH1~4 。
+        /**CCR 捕获/比较寄存器，该寄存器总共有 4 个 (TIMx_CCR1~4)，对应 4 个输通道 CH1~4。
         这 4 个寄存器都差不多，以 TIMx_CCR1说明。在 PWM 模式下，CCR1 的值决定了 PWM 信号的占空比。
         当计数器（TIMx_CNT）的值小于 CCR1 时，输出为高电平。当计数器的值大于或等于 CCR1 时，
         输出为低电平。通过动态修改 CCR1 的值，可以实现占空比的实时调整。*/
 
-        tim->CCR1 = timings[0]; /*TIM capture/compare register 1*/
-        tim->CCR2 = timings[1]; /*TIM capture/compare register 2*/
-        tim->CCR3 = timings[2]; /*TIM capture/compare register 3*/
+        tim->CCR1 = timings[0];
+        tim->CCR2 = timings[1];
+        tim->CCR3 = timings[2];
         
         /*把 PWM 参数应用到 PWM 驱动*/
         if (!tentative) {
             if (is_armed_) {
                 // Set the Automatic Output Enable so that the Master Output Enable
                 // bit will be automatically enabled on the next update event.
-                /*如果 AOE 位置 1，在下一个更新事件 UEV 时，MOE 位被自动置 1。*/
+                /*BDTR 刹车/死区寄存器，如果 AOE 位置 1，在下一个更新事件 UEV 时，MOE 位被自动置 1。*/
                 tim->BDTR |= TIM_BDTR_AOE; /*TIM break and dead-time register*/
             }
         }
@@ -343,14 +343,8 @@ bool Motor::apply_config() {
 }
 
 /**
- * 这是 ODrive 对门级驱动的配置，以及关于电流采样和增益设置的相关操作。
- * 
- * 首先计算精确的增益，然后调整它以获得等于或大于请求的范围，否则使用可能的最大范围。
- * 
- * 常量定义：
- * constexpr float kMargin = 0.90f; 定义了一个常量kMargin，其值为0.90。这个常量用作一个安全裕量或缩放因子。
- * constexpr float max_output_swing = 1.35f; // [V] out of amplifier 定义了一个常量max_output_swing，表示放大器输出的最大摆幅为1.35伏特。
- * 
+ * 根据ODrive的配置和硬件限制（如放大器的最大输出摆幅和分流电阻的电导）来计算一个合适的增益值。
+ * 这个增益值用于确保在期望的电流范围内，放大器可以正常工作，并且不会超出其规格或导致任何损坏。
  * 计算最大单位增益电流：
  * float max_unity_gain_current = kMargin * max_output_swing * shunt_conductance_; // [A]
  * 这里计算了最大单位增益电流。它使用了之前定义的kMargin、max_output_swing和shunt_conductance_（分流电导，单位为西门子）。
@@ -361,9 +355,6 @@ bool Motor::apply_config() {
  * 这里计算了请求的增益。增益是输出变化与输入变化的比率。在这里，它是电压比，所以单位是伏特/伏特（V/V）。
  * config_.requested_current_range很可能是用户或配置文件中设置的期望电流范围。
  * 通过将最大单位增益电流除以请求的电流范围，我们得到了一个增益值，该值表示在给定的电流范围内，输出电压如何随输入电压变化。
- * 
- * 总的来说，这段代码的目的是根据ODrive的配置和硬件限制（如放大器的最大输出摆幅和分流电阻的电导）
- * 来计算一个合适的增益值。这个增益值用于确保在期望的电流范围内，放大器可以正常工作，并且不会超出其规格或导致任何损坏。
  */
 // @brief Set up the gate drivers
 bool Motor::setup() {
@@ -372,7 +363,7 @@ bool Motor::setup() {
 
     // Solve for exact gain, then snap down to have equal or larger range as requested
     // or largest possible range otherwise
-    constexpr float kMargin = 0.90f;
+    constexpr float kMargin = 0.90f; /*安全裕量或缩放因子*/
     /*1.35f 即最大输出摆幅 1.35V，也就是说经过运放放大 x 倍后的最大输出电压因该在 1.35V 之间。
     详细来说就是当采样电阻流过最大设计电流（例如 60A）时在采样电阻两端可以产生最大分压，
     而这个分压经过运放放大 x 倍后的最大输出电压因该在 1.35V 之间。*/
@@ -791,8 +782,13 @@ void Motor::current_meas_cb(uint32_t timestamp, std::optional<Iph_ABC_t> current
         /*on_measurement 内部调用 Clarke transform（克拉克变换）更新 Ialpha, Ibeta*/
         Error err = control_law_->on_measurement(vbus_voltage,
                             current_meas_.has_value() ?
-                                std::make_optional(std::array<float, 3>{current_meas_->phA, current_meas_->phB, current_meas_->phC})
-                                : std::nullopt,
+                                std::make_optional(
+                                    std::array<float, 3>{
+                                        current_meas_->phA, 
+                                        current_meas_->phB, 
+                                        current_meas_->phC
+                                    }
+                                ) : std::nullopt,
                             timestamp);
         if (err != ERROR_NONE) {
             disarm_with_error(err);
@@ -806,7 +802,8 @@ void Motor::current_meas_cb(uint32_t timestamp, std::optional<Iph_ABC_t> current
  * @brief Called when the underlying hardware timer triggers an update event.
  */
 void Motor::dc_calib_cb(uint32_t timestamp, std::optional<Iph_ABC_t> current) {
-    const float dc_calib_period = static_cast<float>(2 * TIM_1_8_PERIOD_CLOCKS * (TIM_1_8_RCR + 1)) / TIM_1_8_CLOCK_HZ;
+    const float dc_calib_period = \
+        static_cast<float>(2 * TIM_1_8_PERIOD_CLOCKS * (TIM_1_8_RCR + 1)) / TIM_1_8_CLOCK_HZ;
     TaskTimerContext tmr{axis_->task_times_.dc_calib};
     /*电机驱动中，使用电流传感器（采样电阻+运放）测量三相电流（Ia, Ib, Ic）。
     这些电流采样电路存在硬件偏移 (DC Offset)，运放有输入失调电压，ADC 有偏移误差，
@@ -855,7 +852,8 @@ void Motor::pwm_update_cb(uint32_t output_timestamp) {
         /*根据 next_timings 最终更新 PWM 驱动，调节电流矢量*/
         apply_pwm_timings(next_timings, false);
     } else if (is_armed_) {
-        if (!(timer_->Instance->BDTR & TIM_BDTR_MOE) && (control_law_status == ERROR_CONTROLLER_INITIALIZING)) {
+        if (!(timer_->Instance->BDTR & TIM_BDTR_MOE) && /*BDTR 刹车/死区寄存器*/
+            (control_law_status == ERROR_CONTROLLER_INITIALIZING)) {
             // If the PWM output is armed in software but not yet in
             // hardware we tolerate the "initializing" error.
             i_bus = 0.0f;

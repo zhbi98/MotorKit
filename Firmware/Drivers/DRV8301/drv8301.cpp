@@ -130,7 +130,7 @@ Drv8301::FaultType_e Drv8301::get_error() {
 
     if (!read_reg(kRegNameStatus1, &fault1) ||
         !read_reg(kRegNameStatus2, &fault2)) {
-        return (FaultType_e)0xffffffff;
+        return (FaultType_e)0xFFFFFFFF;
     }
 
     return (FaultType_e)((uint32_t)fault1 | ((uint32_t)(fault2 & 0x0080) << 16));
@@ -145,14 +145,14 @@ bool Drv8301::read_reg(const RegName_e regName, uint16_t* data) {
     delay_us(1);
 
     tx_buf_ = build_ctrl_word(DRV8301_CtrlMode_Read, regName, 0);
-    rx_buf_ = 0xffff;
+    rx_buf_ = 0xFFFF;
     if (!spi_arbiter_->transfer(ncs_gpio_, (uint8_t *)(&tx_buf_), (uint8_t *)(&rx_buf_), 1, 1000)) {
         return false;
     }
 
     delay_us(1);
 
-    if (rx_buf_ == 0xbeef) {
+    if (rx_buf_ == 0xBEEF) {
         return false;
     }
 

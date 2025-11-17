@@ -73,10 +73,10 @@ void PwmInput::on_capture() {
 
     if(__HAL_TIM_GET_FLAG(htim_, TIM_FLAG_CC3)) { /*TIM_CHANNEL_3 捕获事件*/
         __HAL_TIM_CLEAR_IT(htim_, TIM_IT_CC3);
-        on_capture(0, htim_->Instance->CCR3);
+        on_capture(0, htim_->Instance->CCR3); /*获取定时器 CH3 捕获值*/
     }
     if(__HAL_TIM_GET_FLAG(htim_, TIM_FLAG_CC4)) { /*TIM_CHANNEL_4 捕获事件*/
         __HAL_TIM_CLEAR_IT(htim_, TIM_IT_CC4);
-        on_capture(1, htim_->Instance->CCR4);
+        on_capture(1, htim_->Instance->CCR4); /*获取定时器 CH4 捕获值*/
     }
 }

@@ -171,14 +171,15 @@ static float limitVel(const float vel_limit, const float vel_estimate, const flo
 }
 
 /**
- * Controller::update 是电机位置闭环，速度闭环，电流闭环三环控制核心逻辑。
- * 注意：位置环只用 P，速度环用 PI，电流环用 PI。这样层层递进，响应快且易于调试（实际控制常见做法）。
- * 位置环输出的是速度设定值（vel_des），速度环再用 PI 控制，电流环用 PI 或更复杂控制，这样可以避免积分环节导致的漂移和不稳定。
- * 如果位置环加积分，可能会因编码器噪声或机械死区导致积分“风暴”，影响系统稳定性。
+ * Controller::update 是电机位置闭环，速度闭环，电流闭环三环控制核心逻辑。注意：位置环只用 P，速度环用 PI，
+ * 电流环用 PI。这样层层递进，响应快且易于调试（实际控制常见做法）。
+ * 位置环输出的是速度设定值（vel_des），速度环再用 PI 控制，电流环用 PI 或更复杂控制，
+ * 这样可以避免积分环节导致的漂移和不稳定。如果位置环加积分，可能会因编码器噪声或机械死
+ * 区导致积分 “风暴”，影响系统稳定性。
  */
 bool Controller::update() {
-    /**从 Encoder 对象处实时获取电机位置估计值，pos_estimate_linear_src_，
-    pos_estimate_circular_src_ 通过 connect_to 函数连接到 Encoder，可以从 Encoder 获取位置值）*/
+    /**从 Encoder 对象处实时获取电机位置估计值，pos_estimate_linear_src_，pos_estimate_circular_src_ 
+     * 通过 connect_to 函数连接到 Encoder，可以从 Encoder 获取位置值）*/
     std::optional<float> pos_estimate_linear = pos_estimate_linear_src_.present();
     std::optional<float> pos_estimate_circular = pos_estimate_circular_src_.present();
     std::optional<float> pos_wrap = pos_wrap_src_.present();
@@ -192,10 +193,12 @@ bool Controller::update() {
 
     /*Circular-Position-Control 模式用于连续增量位置运动是有用的，例如转轴无限滚动。
     在正态位置模式下，input_pos 将增长到非常大的值，并且由于浮点取整而失去精度。*/
-    if (axis_->step_dir_active_) { /*step_dir_active_ 指的是脉冲步进控制方式（此时才需要 steps_ 参数）*/
+    /*step_dir_active_ 指的是脉冲步进控制方式（此时才需要 steps_ 参数）*/
+    if (axis_->step_dir_active_) {
         if (config_.circular_setpoints) {
-            /**pos_wrap 用于环形运动 (circular-setpoints) 将位置值包裹在固定范围内，实现位置环的循环范围或周期长度，
-            从而避免数值直线累加溢出或漂移。例如旋转轴位置在 0~360 无限循环，本质就是把位置值限制在 [0, pos_wrap) 区间*/
+            /**pos_wrap 用于环形运动 (circular-setpoints) 将位置值包裹在固定范围内，
+             * 实现位置环的循环范围或周期长度，从而避免数值直线累加溢出或漂移。例如旋
+             * 转轴位置在 0~360 无限循环，本质就是把位置值限制在 [0, pos_wrap) 区间*/
             if (!pos_wrap.has_value()) {
                 set_error(ERROR_INVALID_CIRCULAR_RANGE);
                 return false;
@@ -354,15 +357,19 @@ bool Controller::update() {
     float vel_des = vel_setpoint_;
 
     /**
-     * gain_scheduling_multiplier 作用是根据位置误差动态调整控制器的各个增益 (vel_gain, vel_integrator_gain)，实现 “增益调度” (gain scheduling)。
-     * 乘上它这会让增益（如 pos_gain, vel_gain 等）随着误差变小而线性减小，误差为零时增益为零，误差最大时增益为 1.0。
+     * gain_scheduling_multiplier 作用是根据位置误差动态调整控制器的各个增益 
+     * (vel_gain, vel_integrator_gain)，实现 “增益调度” (gain scheduling)。
+     * 乘上它这会让增益（如 pos_gain, vel_gain 等）随着误差变小而线性减小，
+     * 误差为零时增益为零，误差最大时增益为 1.0。
      * 这样做的目的是防止在目标附近时增益过高导致抖动或超调，而在误差较大时保持较高响应速度。
-     * 后续所有用到 gain_scheduling_multiplier 的地方（如速度环、积分环）都会乘以它，实现各个增益根据目标误差自动动态调节。
+     * 后续所有用到 gain_scheduling_multiplier 的地方（如速度环、积分环）都会乘以它，
+     * 实现各个增益根据目标误差自动动态调节。
      */
 
-    /*control_mode >= MODE_XX 使用 >= 这种写法用于判断当前控制模式是否包含或高于某个环节（如位置环）。
-    可以让同一段代码适用于更高层的模式。例如，位置环相关代码在位置控制及更高模式下都需要执行，
-    即控制模式是递进的，数值越高，包含的控制环节越多。*/
+    /*control_mode >= MODE_XX 使用 >= 这种写法用于判断当前控制模式是否包含或高
+    于某个环节（如位置环）。可以让同一段代码适用于更高层的模式。例如，位置环相关代
+    码在位置控制及更高模式下都需要执行，即控制模式是递进的，数值越高，
+    包含的控制环节越多。*/
     if (config_.control_mode >= CONTROL_MODE_POSITION_CONTROL) {
         float pos_err;
 
@@ -377,11 +384,14 @@ bool Controller::update() {
             // Circular delta
             pos_err = pos_setpoint_ - *pos_estimate_circular;
             
-            /**wrap_pm 是用于环形坐标 (circular setpoints) 下的位置误差计算，确保误差始终在一个合理的区间内
-            （根据 wrap_pm 的计算逻辑可知，区间范围通常是 [-range/2, +range/2]），避免因为角度跨越零点导致的数值跳变。
-            例如：当位置是环形（比如旋转轴 360 无限循环），直接相减可能得到很大的误差（比如从 359 到 1，直接相减是 -358，但实际只差 2）。
-            wrap_pm(x, range) 会把误差 x 包裹到 [-range/2, +range/2] 区间，保证环形运动的误差计算始终是最短路径，
-            避免跨界跳变。这样控制器就能正确地控制到目标位置，而不会因为数值跳变导致控制异常。*/
+            /**wrap_pm 是用于环形坐标 (circular setpoints) 下的位置误差计算，
+            确保误差始终在一个合理的区间内（根据 wrap_pm 的计算逻辑可知，区间
+            范围通常是 [-range/2, +range/2]），避免因为角度跨越零点导致的数值跳变。
+            例如：当位置是环形（比如旋转轴 360 无限循环），直接相减可能得到很大的误差
+            （比如从 359 到 1，直接相减是 -358，但实际只差 2）。 wrap_pm(x, range) 
+            会把误差 x 包裹到 [-range/2, +range/2] 区间，保证环形运动的误差计算始
+            终是最短路径，避免跨界跳变。这样控制器就能正确地控制到目标位置，
+            而不会因为数值跳变导致控制异常。*/
             pos_err = wrap_pm(pos_err, *pos_wrap);
         } else {
             if (!pos_estimate_linear.has_value()) {
@@ -391,7 +401,8 @@ bool Controller::update() {
             pos_err = pos_setpoint_ - *pos_estimate_linear;
         }
 
-        /**vel_des 即将位置误差乘以比例增益 (pos_gain)，并加到期望速度 vel_des 上。这里是典型的比例控制*/
+        /**这里是典型的比例控制，vel_des 即将位置误差乘以比例增益 
+         * (pos_gain)，并加到期望速度 vel_des 上。*/
         vel_des += config_.pos_gain * pos_err;
         // V-shaped gain shedule based on position error
         float abs_pos_err = std::abs(pos_err);
@@ -408,7 +419,8 @@ bool Controller::update() {
         vel_des = std::clamp(vel_des, -vel_lim, vel_lim);
     }
 
-    // Check for overspeed fault (done in this module (controller) for cohesion with vel_lim)（如果速度估计超过容忍阈值则报错中断）
+    // Check for overspeed fault (done in this module (controller) for cohesion with vel_lim)
+    // 如果速度估计超过容忍阈值则报错中断
     if (config_.enable_overspeed_error) {  // 0.0f to disable
         if (!vel_estimate.has_value()) {
             set_error(ERROR_INVALID_ESTIMATE);
@@ -463,27 +475,32 @@ bool Controller::update() {
         }
 
         v_err = vel_des - *vel_estimate;
-        /**torque 即将位置误差乘以比例增益 (vel_gain)，并加到期望力矩 torque 上。这里是典型的比例控制*/
+        /**torque 即将位置误差乘以比例增益 (vel_gain)，
+         * 并加到期望力矩 torque 上。这里是典型的比例控制*/
         torque += (vel_gain * gain_scheduling_multiplier) * v_err;
 
         // Velocity integral action before limiting（速度环积分控制）
-        torque += vel_integrator_torque_; /*vel_integrator_torque_ 的更新逻辑在下面部分*/
+        torque += vel_integrator_torque_;
+        /*vel_integrator_torque_ 的更新逻辑在下面部分*/
     }
 
     /**电流闭环控制（即力矩控制环）*/
     // Velocity limiting in current mode
     if (config_.control_mode < CONTROL_MODE_VELOCITY_CONTROL && config_.enable_torque_mode_vel_limit) {
         if (!vel_estimate.has_value()) {
-            /*编码器校准参数没有被保存到 Flash，或启动时未读取到编码器校准参数，导致编码器未启动*/
+            /*编码器校准参数没有被保存到 Flash，
+            或启动时未读取到编码器校准参数，导致编码器未启动*/
             set_error(ERROR_INVALID_ESTIMATE);
             return false;
         }
         torque = limitVel(config_.vel_limit, *vel_estimate, vel_gain, torque);
     }
 
-    /*注意：实际电路电流大小没有传递到这里的所谓电流闭环控制参与计算，这里的电流闭环控制只负责计算出目标扭矩/电流，
-    最终目标扭矩会传递给电流控制器（通常在 FieldOrientedController 相关模块，采集实际电流值如 Iq_measured_, Id_measured_），
-    电流控制器会根据这个目标扭矩和获取实际电路电流大小，执行 PI 闭环计算，基于计算结果调整驱动信号，实现电流环闭环。*/
+    /*注意：实际电路电流大小没有传递到这里的所谓电流闭环控制参与计算，这里的
+    电流闭环控制只负责计算出目标扭矩/电流，最终目标扭矩会传递给电流控制器
+    （通常在 FieldOrientedController 相关模块，采集实际电流值如 
+    Iq_measured_, Id_measured_），电流控制器会根据这个目标扭矩和获取实际
+    电路电流大小，执行 PI 闭环计算，基于计算结果调整驱动信号，实现电流环闭环。*/
 
     // Torque limiting
     bool limited = false;

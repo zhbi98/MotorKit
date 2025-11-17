@@ -42,32 +42,6 @@ osThreadId analog_thread = 0;
 /* Safety critical functions -------------------------------------------------*/
 
 /*
-* This section contains all accesses to safety critical hardware registers.
-* Specifically, these registers:
-*   Motor0 PWMs:
-*     Timer1.MOE (master output enabled)
-*     Timer1.CCR1 (counter compare register 1)
-*     Timer1.CCR2 (counter compare register 2)
-*     Timer1.CCR3 (counter compare register 3)
-*   Motor1 PWMs:
-*     Timer8.MOE (master output enabled)
-*     Timer8.CCR1 (counter compare register 1)
-*     Timer8.CCR2 (counter compare register 2)
-*     Timer8.CCR3 (counter compare register 3)
-*   Brake resistor PWM:
-*     Timer2.CCR3 (counter compare register 3)
-*     Timer2.CCR4 (counter compare register 4)
-* 
-* The following assumptions are made:
-*   - The hardware operates as described in the datasheet:
-*     http://www.st.com/content/ccc/resource/technical/document/reference_manual/3d/6d/5a/66/b4/99/40/d4/DM00031020.pdf/files/DM00031020.pdf/jcr:content/translations/en.DM00031020.pdf
-*     This assumption also requires for instance that there are no radiation
-*     caused hardware errors.
-*   - After startup, all variables used in this section are exclusively modified
-*     by the code in this section (this excludes function parameters)
-*     This assumption also requires that there is no memory corruption.
-*   - This code is compiled by a C standard compliant compiler.
-*
 * Furthermore:
 *   - Between calls to safety_critical_arm_motor_pwm and
 *     safety_critical_disarm_motor_pwm the motor's Ibus current is
@@ -83,6 +57,9 @@ void safety_critical_arm_brake_resistor() {
         for (size_t i = 0; i < AXIS_COUNT; ++i) {
             axes[i].motor_.I_bus_ = 0.0f;
         }
+        /*CCR 捕获/比较寄存器，该寄存器总共有 4 个 (TIMx_CCR1~4)，
+        对应 4 个输通道 CH1~4。TIM 在 PWM 模式下，
+        CCR 的值决定了 PWM 信号的占空比。*/
         brake_resistor_armed = true;
         htim2.Instance->CCR3 = 0;
         htim2.Instance->CCR4 = TIM_APB1_PERIOD_CLOCKS + 1;
@@ -96,6 +73,9 @@ void safety_critical_arm_brake_resistor() {
 void safety_critical_disarm_brake_resistor() {
     bool brake_resistor_was_armed = brake_resistor_armed;
 
+    /*CCR 捕获/比较寄存器，该寄存器总共有 4 个 (TIMx_CCR1~4)，
+    对应 4 个输通道 CH1~4。TIM 在 PWM 模式下，
+    CCR 的值决定了 PWM 信号的占空比。*/
     CRITICAL_SECTION() {
         brake_resistor_armed = false;
         htim2.Instance->CCR3 = 0;
@@ -117,6 +97,9 @@ void safety_critical_apply_brake_resistor_timings(uint32_t low_off, uint32_t hig
         odrv.disarm_with_error(ODrive::ERROR_BRAKE_DEADTIME_VIOLATION);
     }
 
+    /*CCR 捕获/比较寄存器，该寄存器总共有 4 个 (TIMx_CCR1~4)，
+    对应 4 个输通道 CH1~4。TIM 在 PWM 模式下，
+    CCR 的值决定了 PWM 信号的占空比。*/
     CRITICAL_SECTION() {
         if (brake_resistor_armed) {
             // Safe update of low and high side timings
@@ -132,6 +115,8 @@ void safety_critical_apply_brake_resistor_timings(uint32_t low_off, uint32_t hig
 
 /* Function implementations --------------------------------------------------*/
 
+/*CCR 捕获/比较寄存器，该寄存器总共有 4 个 (TIMx_CCR1~4)，对应 4 个输通道 CH1~4。
+TIM 在 PWM 模式下，CCR 的值决定了 PWM 信号的占空比。*/
 void start_adc_pwm() {
     // Disarm motors
     for (auto& axis: axes) {
@@ -189,7 +174,7 @@ uint16_t adc_measurements_[ADC_CHANNEL_COUNT] = { 0 };
 // The injected (high priority) channel of ADC1 is used to sample vbus_voltage.
 // This conversion is triggered by TIM1 at the frequency of the motor control loop.
 void start_general_purpose_adc() {
-#if 0
+#if 0 /*Modify by zhbi98*/
     ADC_ChannelConfTypeDef sConfig;
 
     // Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
@@ -221,7 +206,9 @@ void start_general_purpose_adc() {
         }
     }
 #endif
-    HAL_ADC_Start_DMA(&hadc1, reinterpret_cast<uint32_t*>(adc_measurements_), ADC_CHANNEL_COUNT);
+    HAL_ADC_Start_DMA(&hadc1, 
+        reinterpret_cast<uint32_t*>(adc_measurements_), 
+        ADC_CHANNEL_COUNT);
 }
 
 // @brief Returns the ADC voltage associated with the specified pin.
@@ -285,8 +272,11 @@ void update_brake_current() {
         /*根据欧姆定律 U=I*R，根据刹车电流得到刹车电压，刹车电压与母线电压的比值就是输出刹车电压需要的占空比*/
         brake_duty = brake_current * odrv.config_.brake_resistance / vbus_voltage;
         
-        if (odrv.config_.enable_dc_bus_overvoltage_ramp && (odrv.config_.brake_resistance > 0.0f) && (odrv.config_.dc_bus_overvoltage_ramp_start < odrv.config_.dc_bus_overvoltage_ramp_end)) {
-            brake_duty += std::max((vbus_voltage - odrv.config_.dc_bus_overvoltage_ramp_start) / (odrv.config_.dc_bus_overvoltage_ramp_end - odrv.config_.dc_bus_overvoltage_ramp_start), 0.0f);
+        if (odrv.config_.enable_dc_bus_overvoltage_ramp && (odrv.config_.brake_resistance > 0.0f) && 
+            (odrv.config_.dc_bus_overvoltage_ramp_start < odrv.config_.dc_bus_overvoltage_ramp_end)
+        ) {
+            brake_duty += std::max((vbus_voltage - odrv.config_.dc_bus_overvoltage_ramp_start) / 
+                (odrv.config_.dc_bus_overvoltage_ramp_end - odrv.config_.dc_bus_overvoltage_ramp_start), 0.0f);
         }
 
         if (is_nan(brake_duty)) {
@@ -334,29 +324,15 @@ void update_brake_current() {
 
 
 /* Analog speed control input */
-
-static void update_analog_endpoint(const struct PWMMapping_t *map, int gpio)
-{
-    /*float fraction = get_adc_voltage(get_gpio(gpio)) / 3.3f;*/
-    /*float value = map->min + (fraction * (map->max - map->min));*/
-    /*解析 odrive-utilities(odrivetool) Python 脚本下发的配置指令，然后调用执行配置操作函数*/
-    /*fibre::set_endpoint_from_float(map->endpoint, value); Modify by zhbi98*/
-}
-
 static void analog_polling_thread(void *)
 {
     while (true) {
-        /*for (int i = 0; i < GPIO_COUNT; i++) {
-            struct PWMMapping_t *map = &odrv.config_.analog_mappings[i];
-
-            if (fibre::is_endpoint_ref_valid(map->endpoint))
-                update_analog_endpoint(map, i);
-        }Modify by zhbi98 */
-        osDelay(10);
+        osDelay(1000);
     }
 }
 
 void start_analog_thread() {
-    osThreadDef(analog_thread_def, analog_polling_thread, osPriorityLow, 0, stack_size_analog_thread / sizeof(StackType_t));
+    osThreadDef(analog_thread_def, analog_polling_thread, osPriorityLow, 0, 
+        stack_size_analog_thread / sizeof(StackType_t));
     analog_thread = osThreadCreate(osThread(analog_thread_def), NULL);
 }
