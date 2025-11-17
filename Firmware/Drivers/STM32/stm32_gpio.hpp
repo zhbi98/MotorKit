@@ -3,11 +3,27 @@
 
 #include <gpio.h>
 
+/**
+ * @brief GPIO device abstraction class for STM32 microcontrollers
+ * This class provides a hardware-independent interface 
+ * for controlling GPIO pins.It encapsulates GPIO port and pin configuration, 
+ * and offers basic read/write operations.
+ */
 class Stm32Gpio {
 public:
     static const Stm32Gpio none;
 
+    /**
+     * @brief Default constructor - initializes to safe state
+     * Creates an unconfigured GPIO object (null port, pin 0)
+     */
     Stm32Gpio() : port_(nullptr), pin_mask_(0) {}
+
+    /**
+     * @brief Parameterized constructor
+     * @param _gpio Pointer to GPIO port register (e.g. GPIOA, GPIOB)
+     * @param _pin GPIO pin number (e.g. GPIO_PIN_0, GPIO_PIN_1)
+     */
     Stm32Gpio(GPIO_TypeDef* port, uint16_t pin) : port_(port), pin_mask_(pin) {}
 
     operator bool() const { return port_ && pin_mask_; }
@@ -21,12 +37,21 @@ public:
      */
     bool config(uint32_t mode, uint32_t pull, uint32_t speed = GPIO_SPEED_FREQ_LOW);
 
+    /**
+     * @brief Write to GPIO pin
+     * @param state Desired pin state (true = high, false = low)
+     * @note If port is not initialized (nullptr), this function is a no-op
+     */
     void write(bool state) {
         if (port_) {
             HAL_GPIO_WritePin(port_, pin_mask_, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
         }
     }
 
+    /**
+     * @brief Read from GPIO pin
+     * @return true if pin is high, false if pin is low
+     */
     bool read() {
         return port_ && (port_->IDR & pin_mask_);
     }
@@ -75,8 +100,9 @@ public:
         return pin_number;
     }
 
-    GPIO_TypeDef* port_;
-    uint16_t pin_mask_; // TODO: store pin_number_ instead of pin_mask_
+    /* Hardware interface pointers */
+    GPIO_TypeDef* port_; /**< Pointer to GPIO port registers*/
+    uint16_t pin_mask_; /**< gpio pin identifier, instead of pin_mask_*/
 };
 
 #endif // __STM32_GPIO_HPP

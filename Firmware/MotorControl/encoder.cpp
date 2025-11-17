@@ -41,26 +41,6 @@ void Encoder::setup() {
 
     mode_ = config_.mode;
 
-    /**
-     * 虽然在启动时 SPI 统一初始化了同一的 SPI 模式，但是那个统一的初始化结构体不能适应所有使用了 SPI 的硬件模块，
-     * 所以每个使用了 SPI 的硬件模块中会定义一个属于自己模式的 SPI 初始化结构体，
-     * 并将这个结构体传递到 stm32_spi_arbiter 对象中使用。
-     * 所以这就是为什么要在这里定义一个 SPI 初始化结构体。
-     */
-    spi_task_.config = {
-        .Mode = SPI_MODE_MASTER,
-        .Direction = SPI_DIRECTION_2LINES,
-        .DataSize = SPI_DATASIZE_16BIT,
-        .CLKPolarity = (mode_ == MODE_SPI_ABS_AEAT || mode_ == MODE_SPI_ABS_MA732) ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW,
-        .CLKPhase = SPI_PHASE_2EDGE,
-        .NSS = SPI_NSS_SOFT,
-        .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16,
-        .FirstBit = SPI_FIRSTBIT_MSB,
-        .TIMode = SPI_TIMODE_DISABLE,
-        .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
-        .CRCPolynomial = 10,
-    };
-
     if (mode_ == MODE_SPI_ABS_MA732) {
         abs_spi_dma_tx_[0] = 0x0000;
     }
@@ -612,8 +592,11 @@ bool Encoder::abs_spi_start_transaction() {
             spi_task_.tx_buf = (uint8_t*)abs_spi_dma_tx_;
             spi_task_.rx_buf = (uint8_t*)abs_spi_dma_rx_;
             spi_task_.length = 1;
-            spi_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->abs_spi_cb(success); };
-            spi_task_.on_complete_ctx = this;
+            spi_task_.end_callback = [](void* ctx, bool success) 
+            { 
+                ((Encoder*)ctx)->abs_spi_cb(success); 
+            };
+            spi_task_.parm = this;
             spi_task_.next = nullptr;
             
             spi_arbiter_->transfer_async(&spi_task_);
@@ -707,7 +690,7 @@ done:
 
 void Encoder::abs_spi_cs_pin_init(){
     // Decode and init cs pin
-    abs_spi_cs_gpio_.config(GPIO_MODE_OUTPUT_PP, GPIO_PULLUP);
+    /*abs_spi_cs_gpio_.config(GPIO_MODE_OUTPUT_PP, GPIO_PULLUP);*/
 
     // Write pin high
     abs_spi_cs_gpio_.write(true);

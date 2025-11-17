@@ -4,20 +4,6 @@
 #include "utils.hpp"
 #include <cmsis_os.h>
 
-bool equals(const SPI_InitTypeDef& lhs, const SPI_InitTypeDef& rhs) {
-  return (lhs.Mode == rhs.Mode)
-      && (lhs.Direction == rhs.Direction)
-      && (lhs.DataSize == rhs.DataSize)
-      && (lhs.CLKPolarity == rhs.CLKPolarity)
-      && (lhs.CLKPhase == rhs.CLKPhase)
-      && (lhs.NSS == rhs.NSS)
-      && (lhs.BaudRatePrescaler == rhs.BaudRatePrescaler)
-      && (lhs.FirstBit == rhs.FirstBit)
-      && (lhs.TIMode == rhs.TIMode)
-      && (lhs.CRCCalculation == rhs.CRCCalculation)
-      && (lhs.CRCPolynomial == rhs.CRCPolynomial);
-}
-
 bool Stm32SpiArbiter::acquire_task(SpiTask* task) {
     return !__atomic_exchange_n(&task->is_in_use, true, __ATOMIC_SEQ_CST);
 }
@@ -32,12 +18,6 @@ bool Stm32SpiArbiter::start() {
     }
 
     SpiTask& task = *task_list_;
-    if (!equals(task.config, hspi_->Init)) {
-        HAL_SPI_DeInit(hspi_);
-        hspi_->Init = task.config;
-        HAL_SPI_Init(hspi_);
-        __HAL_SPI_ENABLE(hspi_);
-    }
     task.ncs_gpio.write(false);
     
     HAL_StatusTypeDef status = HAL_ERROR;
@@ -90,15 +70,15 @@ void Stm32SpiArbiter::transfer_async(SpiTask* task) {
      */
     if (ptr == &task_list_) {
         if (!start()) {
-            if (task->on_complete) {
-                (*task->on_complete)(task->on_complete_ctx, false);
+            if (task->end_callback) {
+                (*task->end_callback)(task->parm, false);
             }
         }
     }
 }
 
 // TODO: this currently only works when called in a CMSIS thread.
-bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t length, uint32_t timeout_ms) {
+bool Stm32SpiArbiter::transfer(Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t length, uint32_t timeout_ms) {
     volatile uint8_t result = 0xff;
 
     /**
@@ -107,13 +87,12 @@ bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const
      * 所以这就是为什么在 ODive 中每个硬件模块中还会定义一个 SPI 初始化结构体（例如 DRV8301 以及编码中都会定义）。
      */
     SpiTask task = {
-        .config = config,
         .ncs_gpio = ncs_gpio,
         .tx_buf = tx_buf,
         .rx_buf = rx_buf,
         .length = length,
-        .on_complete = [](void* ctx, bool success) { *(volatile uint8_t*)ctx = success ? 1 : 0; },
-        .on_complete_ctx = (void*)&result,
+        .end_callback = [](void* ctx, bool success) { *(volatile uint8_t*)ctx = success ? 1 : 0; },
+        .parm = (void*)&result,
         .is_in_use = false,
         .next = nullptr
     };
@@ -139,8 +118,8 @@ void Stm32SpiArbiter::on_complete() {
 
     // Wrap up transfer
     task_list_->ncs_gpio.write(true);
-    if (task_list_->on_complete) {
-        (*task_list_->on_complete)(task_list_->on_complete_ctx, true);
+    if (task_list_->end_callback) {
+        (*task_list_->end_callback)(task_list_->parm, true);
     }
 
     // Start next task if any
