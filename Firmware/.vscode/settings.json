@@ -1,0 +1,6 @@
+{
+    "cortex-debug.variableUseNaturalFormat": false,
+    "files.associations": {
+        "numeric": "cpp"
+    }
+}
