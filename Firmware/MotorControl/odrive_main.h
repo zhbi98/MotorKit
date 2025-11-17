@@ -5,9 +5,6 @@
 #include <board.h>
 
 #ifdef __cplusplus
-#include <communication/interface_usb.h>
-#include <communication/interface_i2c.h>
-#include <communication/interface_uart.h>
 #include <task_timer.hpp>
 extern "C" {
 #endif
@@ -48,31 +45,15 @@ typedef struct {
     int32_t prio_startup;
     int32_t prio_can;
     int32_t prio_analog;
-
-    USBStats_t& usb = usb_stats_;
-    I2CStats_t& i2c = i2c_stats_;
 } SystemStats_t;
 
 struct PWMMapping_t {
-    endpoint_ref_t endpoint = {0, 0};
     float min = 0;
     float max = 0;
 };
 
 // @brief general user configurable board configuration
 struct BoardConfig_t {
-    bool enable_uart_a = true;
-    bool enable_uart_b = false;
-    bool enable_uart_c = false;
-    uint32_t uart_a_baudrate = 115200;
-    uint32_t uart_b_baudrate = 115200;
-    uint32_t uart_c_baudrate = 115200;
-    bool enable_can_a = true;
-    bool enable_i2c_a = false;
-    ODriveIntf::StreamProtocolType uart0_protocol = ODriveIntf::STREAM_PROTOCOL_TYPE_ASCII_AND_STDOUT;
-    ODriveIntf::StreamProtocolType uart1_protocol = ODriveIntf::STREAM_PROTOCOL_TYPE_ASCII_AND_STDOUT;
-    ODriveIntf::StreamProtocolType uart2_protocol = ODriveIntf::STREAM_PROTOCOL_TYPE_ASCII_AND_STDOUT;
-    ODriveIntf::StreamProtocolType usb_cdc_protocol = ODriveIntf::STREAM_PROTOCOL_TYPE_ASCII_AND_STDOUT;
     float max_regen_current = 0.0f;
     float brake_resistance = DEFAULT_BRAKE_RESISTANCE; /*如果没有使能刹车电阻，刹车电阻设置值不生效，刹车电阻为任何值都可以*/
     bool enable_brake_resistor = false; /*如果没有使能刹车电阻，刹车电阻设置值不生效，刹车电阻为任何值都可以*/

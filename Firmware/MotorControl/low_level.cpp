@@ -322,17 +322,24 @@ void update_brake_current() {
     safety_critical_apply_brake_resistor_timings(low_off, high_on);
 }
 
+#include "shell_device.h"
+#include "shell_cpp.h"
+
+extern bool data_pending;
 
 /* Analog speed control input */
-static void analog_polling_thread(void *)
+static void analog_polling_thread(void *param)
 {
     while (true) {
-        osDelay(1000);
+        if (data_pending)
+        shellTask(param);
+        osDelay(10);
     }
 }
 
 void start_analog_thread() {
     osThreadDef(analog_thread_def, analog_polling_thread, osPriorityLow, 0, 
         stack_size_analog_thread / sizeof(StackType_t));
-    analog_thread = osThreadCreate(osThread(analog_thread_def), NULL);
+    analog_thread = osThreadCreate(osThread(analog_thread_def), 
+        shell_device_get_object());
 }

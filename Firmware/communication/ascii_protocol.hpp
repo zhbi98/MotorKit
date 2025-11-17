@@ -1,15 +1,12 @@
 #ifndef __ASCII_PROTOCOL_HPP
 #define __ASCII_PROTOCOL_HPP
 
-#include <fibre/async_stream.hpp>
-#include <fibre/../../stream_utils.hpp>
 
 #define MAX_LINE_LENGTH ((size_t)256)
 
 class AsciiProtocol {
 public:
-    AsciiProtocol(fibre::AsyncStreamSource* rx_channel, fibre::AsyncStreamSink* tx_channel)
-        : rx_channel_(rx_channel), sink_(*tx_channel) {}
+    AsciiProtocol() {}
 
     void start();
 
@@ -30,17 +27,13 @@ private:
     void cmd_encoder(char * pStr, bool use_checksum);
 
     template<typename ... TArgs> void respond(bool include_checksum, const char * fmt, TArgs&& ... args);
-    void process_line(fibre::cbufptr_t buffer);
-    void on_write_finished(fibre::WriteResult result);
-    void on_read_finished(fibre::ReadResult result);
+    void process_line(char *  buffer);
+    void on_read_finished(bool result);
 
-    fibre::AsyncStreamSource* rx_channel_ = nullptr;
     uint8_t* rx_end_ = nullptr; // non-zero if an RX operation has finished but wasn't handled yet because the TX channel was busy
 
     uint8_t rx_buf_[MAX_LINE_LENGTH];
     bool read_active_ = true;
-
-    fibre::BufferedStreamSink<512> sink_;
 };
 
 #endif // __ASCII_PROTOCOL_HPP

@@ -2,9 +2,7 @@
 #define __ODRIVE_CAN_HPP
 
 #include <cmsis_os.h>
-
-#include "canbus.hpp"
-#include "can_simple.hpp"
+#include "stm32f4xx_hal.h"
 #include <autogen/interfaces.hpp>
 
 #define CAN_CLK_HZ (42000000)
@@ -19,7 +17,7 @@ enum {
     CAN_BAUD_1M = 1000000
 };
 
-class ODriveCAN : public CanBusBase, public ODriveIntf::CanIntf {
+class ODriveCAN : public ODriveIntf::CanIntf {
 public:
     struct Config_t {
         uint32_t baud_rate = CAN_BAUD_250K;
@@ -37,7 +35,6 @@ public:
     Error error_ = ERROR_NONE;
 
     Config_t config_;
-    CANSimple can_simple_{this};
 
     osThreadId thread_id_;
     const uint32_t stack_size_ = 1024;  // Bytes
@@ -45,23 +42,16 @@ public:
 private:
     static const uint8_t kCanFifoNone = 0xff;
 
-    struct ODriveCanSubscription : CanSubscription {
-        uint8_t fifo = kCanFifoNone;
-        on_can_message_cb_t callback;
-        void* ctx;
-    };
-
     bool reinit();
     void can_server_thread();
     bool set_baud_rate(uint32_t baud_rate);
     void process_rx_fifo(uint32_t fifo);
-    bool send_message(const can_Message_t& message) final;
-    bool subscribe(const MsgIdFilterSpecs& filter, on_can_message_cb_t callback, void* ctx, CanSubscription** handle) final;
-    bool unsubscribe(CanSubscription* handle) final;
+    bool send_message();
+    bool subscribe();
+    bool unsubscribe();
 
     // Hardware supports at most 28 filters unless we do optimizations. For now
     // we don't need that many.
-    std::array<ODriveCanSubscription, 8> subscriptions_;
     CAN_HandleTypeDef *handle_ = nullptr;
 };
 

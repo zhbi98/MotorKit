@@ -52,8 +52,8 @@
 
 /* USER CODE BEGIN INCLUDE */
 #include "cmsis_os.h"
-#include <communication/interface_usb.h>
 #include <freertos_vars.h>
+#include "shell_device.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -115,6 +115,16 @@
   * @{
   */
 
+/* Create buffer for reception and transmission           */
+/* It's up to user to redefine and/or remove those define */
+/** Received data over USB are stored in this buffer      */
+uint8_t CDCRxBufferFS[APP_RX_DATA_SIZE] = {0};
+uint8_t ODRIVERxBufferFS[APP_RX_DATA_SIZE] = {0};
+
+/** Data to send over USB CDC are stored in this buffer   */
+uint8_t CDCTxBufferFS[APP_TX_DATA_SIZE] = {0};
+uint8_t ODRIVETxBufferFS[APP_TX_DATA_SIZE] = {0};
+
 /* USER CODE BEGIN PRIVATE_VARIABLES */
 /* USER CODE END PRIVATE_VARIABLES */
 
@@ -171,6 +181,11 @@ static int8_t CDC_Init_FS(void)
   /* USER CODE BEGIN 3 */
   /* Set Application Buffers */
   osMessagePut(usb_event_queue, 1, 0);
+
+  USBD_CDC_ReceivePacket(&hUsbDeviceFS, 
+    CDCRxBufferFS, APP_RX_DATA_SIZE, 
+    CDC_OUT_EP);
+
   return (USBD_OK);
   /* USER CODE END 3 */
 }
@@ -283,7 +298,21 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len, uint8_t endpoint_pair)
 {
   /* USER CODE BEGIN 6 */
-  usb_rx_process_packet(Buf, *Len, endpoint_pair);
+
+  if (Buf == NULL || Len == NULL) {
+    CDC_Transmit_FS("Hello, STM32!", 13, CDC_IN_EP);
+    USBD_CDC_ReceivePacket(&hUsbDeviceFS, 
+      CDCRxBufferFS, APP_RX_DATA_SIZE, 
+      CDC_OUT_EP);
+    return USBD_FAIL;
+  }
+
+  if (endpoint_pair == CDC_OUT_EP) {
+    shell_qq_readusb(Buf, *Len);
+    USBD_CDC_ReceivePacket(&hUsbDeviceFS, 
+      CDCRxBufferFS, APP_RX_DATA_SIZE, 
+      CDC_OUT_EP);
+  }
 
   return (USBD_OK);
   /* USER CODE END 6 */

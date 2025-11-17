@@ -55,15 +55,15 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/Drivers/DRV8301
     ${CMAKE_SOURCE_DIR}/Drivers/STM32
     ${CMAKE_SOURCE_DIR}/fibre_cpp
-    ${CMAKE_SOURCE_DIR}/fibre_cpp/include
-    ${CMAKE_SOURCE_DIR}/fibre_cpp/include/fibre
-    # ${CMAKE_SOURCE_DIR}/fibre_cpp/platform_support
     ${CMAKE_SOURCE_DIR}/MotorControl
     ${CMAKE_SOURCE_DIR}/ThirdParty/CMSIS/Device/ST/STM32F4xx/Include
     ${CMAKE_SOURCE_DIR}/ThirdParty/CMSIS/Include
     ${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source/CMSIS_RTOS
     ${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source/include
     ${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source/portable/GCC/ARM_CM4F
+    ${CMAKE_SOURCE_DIR}/ThirdParty/LetterShell/src
+    ${CMAKE_SOURCE_DIR}/ThirdParty/LetterShell/extensions/cpp_support
+    ${CMAKE_SOURCE_DIR}/ThirdParty/LetterShell/extensions/log
     ${CMAKE_SOURCE_DIR}/ThirdParty/STM32_USB_Device_Library/Class/CDC/Inc
     ${CMAKE_SOURCE_DIR}/ThirdParty/STM32_USB_Device_Library/Core/Inc
     ${CMAKE_SOURCE_DIR}/ThirdParty/STM32F4xx_HAL_Driver/Inc
@@ -81,12 +81,13 @@ aux_source_directory(${CMAKE_SOURCE_DIR}/communication/can COMMUNICATION_CAN)
 aux_source_directory(${CMAKE_SOURCE_DIR}/Drivers/DRV8301 DRV_DRV8301)
 aux_source_directory(${CMAKE_SOURCE_DIR}/Drivers/STM32 DRV_STM32)
 aux_source_directory(${CMAKE_SOURCE_DIR}/fibre_cpp FIBRE_CPP_MAIN)
-# aux_source_directory(${CMAKE_SOURCE_DIR}/fibre_cpp/platform_support PLATFORM_SUPPORT)
 aux_source_directory(${CMAKE_SOURCE_DIR}/MotorControl MOTOR_CONTROL)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source RTOS_MAIN)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source/CMSIS_RTOS CMSIS_RTOS)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source/portable/GCC/ARM_CM4F GCC_RTOS)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/FreeRTOS/Source/portable/MemMang MEMMANG_RTOS)
+aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/LetterShell/src/ SRC_SHELL)
+aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/LetterShell/extensions/log LOG_SHELL)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/STM32_USB_Device_Library/Class/CDC/Src USB_CLASS)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/STM32_USB_Device_Library/Core/Src USB_CORE)
 aux_source_directory(${CMAKE_SOURCE_DIR}/ThirdParty/STM32F4xx_HAL_Driver/Src HAL_DRIVER)
@@ -111,12 +112,13 @@ add_executable(${PROJECT_NAME}.elf
     ${DRV_DRV8301}
     ${DRV_STM32}
     ${FIBRE_CPP_MAIN}
-    # ${PLATFORM_SUPPORT}
     ${MOTOR_CONTROL}
     ${RTOS_MAIN}
     ${CMSIS_RTOS}
     ${GCC_RTOS}
     ${MEMMANG_RTOS}
+    ${SRC_SHELL}
+    ${LOG_SHELL}
     ${USB_CLASS}
     ${USB_CORE}
     ${HAL_DRIVER}
