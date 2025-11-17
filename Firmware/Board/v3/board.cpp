@@ -50,6 +50,7 @@ Drv8301 m1_gate_driver{
     {GPIOD, GPIO_PIN_2} // nFAULT pin (shared between both motors)
 };
 
+/*场效应晶体管热敏电阻多项式系数*/
 const float fet_thermistor_poly_coeffs[] =
     {363.93910201f, -462.15369634f, 307.55129571f, -27.72569531f};
 const size_t fet_thermistor_num_coeffs = sizeof(fet_thermistor_poly_coeffs)/sizeof(fet_thermistor_poly_coeffs[1]);
@@ -116,6 +117,8 @@ Endstop endstops[2 * AXIS_COUNT] = {
     {{nullptr, 0}},{{nullptr, 0}},
     {{nullptr, 0}},{{nullptr, 0}},
 };
+
+/*机械刹车制动器*/
 MechanicalBrake mechanical_brakes[AXIS_COUNT] = {
     {{nullptr, 0}},{{nullptr, 0}},
 };
@@ -153,7 +156,15 @@ std::array<Axis, AXIS_COUNT> axes{{
     },
 }};
 
-PwmInput pwm0_input{nullptr, {nullptr, 0}};
+/*PWM 控制，PWM 定时器和 GPIO 配置，多层嵌套的花括号实例化在 C++ 
+中对用户自定义类型非常敏感容易失败，需要显示调用 Stm32Gpio 实例化*/
+PwmInput pwm0_input{
+    nullptr, 
+    {
+        Stm32Gpio(nullptr, 0), 
+        Stm32Gpio(nullptr, 0)
+    }
+};
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 USBD_HandleTypeDef& usb_dev_handle = hUsbDeviceFS;

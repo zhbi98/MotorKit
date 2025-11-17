@@ -20,6 +20,9 @@ ThermistorCurrentLimiter::ThermistorCurrentLimiter(uint16_t adc_channel,
 
 void ThermistorCurrentLimiter::update() {
     const float normalized_voltage = get_adc_relative_voltage_ch(adc_channel_);
+    /*horner_poly_eval 实现了 霍纳法（Horner's Method） 来高效地计算多项式的值，用于温度补偿曲线拟合，
+    根据温度查表拟合出电阻变化曲线，x 多项式变量的值（输入），coeffs 系数数组，coeffs[0] 是最高次项的系数，
+    count 系数个数，也等于多项式的次数 + 1（即 degree + 1）。*/
     float raw_temperature_ = horner_poly_eval(normalized_voltage, coefficients_, num_coeffs_);
 
     constexpr float tau = 0.1f; // [sec]
@@ -73,17 +76,9 @@ OffboardThermistorCurrentLimiter::OffboardThermistorCurrentLimiter() :
                              num_coeffs_,
                              config_.temp_limit_lower,
                              config_.temp_limit_upper,
-                             config_.enabled)
-{
-    decode_pin();
-}
+                             config_.enabled) {}
 
 bool OffboardThermistorCurrentLimiter::apply_config() {
     config_.parent = this;
-    decode_pin();
     return true;
-}
-
-void OffboardThermistorCurrentLimiter::decode_pin() {
-    adc_channel_ = 3;
 }

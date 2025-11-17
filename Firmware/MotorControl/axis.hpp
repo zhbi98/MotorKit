@@ -76,6 +76,7 @@ public:
         bool startup_closed_loop_control = false; //<! enable closed loop control after calibration/startup
         bool startup_homing = false; //<! enable homing after calibration/startup
 
+        /*低频 GPIO 控制模式，外部电平输入步数累计（中断次数累计），注意不是 PWM 输入控制模式，类似 CAN/USB/UASRT 控制模式。*/
         bool enable_step_dir = false; //<! enable step/dir input after calibration
                                     //   For M0 this has no effect if enable_uart is true
         bool step_dir_always_on = false; //<! Keep step/dir enabled while the motor is disabled.
@@ -186,7 +187,7 @@ public:
     // variables exposed on protocol
     Error error_ = ERROR_NONE;
     bool step_dir_active_ = false; // auto enabled after calibration, based on config.enable_step_dir
-    int64_t steps_ = 0; // Steps counted at interface
+    int64_t steps_ = 0; // Steps counted at interface，低频 GPIO 控制模式，外部电平输入步数累计（中断次数累计），注意不是 PWM 输入控制模式，类似 CAN/USB/UASRT 控制模式。
     uint32_t last_drv_fault_ = 0;
 
     // updated from config in constructor, and on protocol hook

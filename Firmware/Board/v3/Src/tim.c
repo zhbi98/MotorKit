@@ -280,6 +280,7 @@ void MX_TIM5_Init(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
+  /*TIM 通用定时器配置输入捕获功能*/
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;

@@ -7,17 +7,17 @@
 
 class PwmInput {
 public:
-    PwmInput(TIM_HandleTypeDef* htim, Stm32Gpio PWM_Pin)
-            : htim_(htim), PWM_Pin_(PWM_Pin) {}
+    PwmInput(TIM_HandleTypeDef* htim, std::array<Stm32Gpio, 2> gpios)
+            : htim_(htim), gpios_(gpios) {}
 
     void init();
     void on_capture();
 
 private:
-    void on_capture(uint32_t timestamp);
+    void on_capture(int gpio_idx, uint32_t timestamp);
 
     TIM_HandleTypeDef* htim_;
-    Stm32Gpio PWM_Pin_; /*std::array<uint16_t, 4> gpios_*/
+    std::array<Stm32Gpio, 2> gpios_;
 };
 
 #endif // __PWM_INPUT_HPP

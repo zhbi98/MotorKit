@@ -146,6 +146,11 @@ inline float wrap_pm_pi(float x) {
     return wrap_pm(x, 2 * M_PI);
 }
 
+/**
+ * horner_poly_eval 实现了 霍纳法（Horner's Method） 来高效地计算多项式的值，用于温度补偿曲线拟合，
+ * 根据温度查表拟合出电阻变化曲线，x 多项式变量的值（输入），coeffs 系数数组，那么 coeffs[0] 是最高次项的系数，
+ * count 系数个数，也等于多项式的次数 + 1（即 degree + 1）。
+ */
 // Evaluate polynomials in an efficient way
 // coeffs[0] is highest order, as per numpy.polyfit
 // p(x) = coeffs[0] * x^deg + ... + coeffs[deg], for some degree "deg"

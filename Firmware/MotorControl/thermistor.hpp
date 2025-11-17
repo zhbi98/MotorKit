@@ -68,7 +68,6 @@ public:
     bool apply_config();
 
 private:
-    void decode_pin();
 };
 
 #endif // __THERMISTOR_HPP

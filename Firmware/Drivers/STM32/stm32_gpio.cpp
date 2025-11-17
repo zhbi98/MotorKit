@@ -37,7 +37,8 @@ bool Stm32Gpio::config(uint32_t mode, uint32_t pull, uint32_t speed) {
 
     size_t position = get_pin_number();
 
-    // The following code is mostly taken from HAL_GPIO_Init
+    /*=== ↓↓↓ The following code is mostly taken from HAL_GPIO_Init ↓↓↓ ======*/
+    /*=== ↓↓↓ 下面这段代码从 STM32 GPIO 初始化函数 HAL_GPIO_Init 复制而来 ↓↓↓ ===*/
 
     /* Configure IO Direction mode (Input, Output, Alternate or Analog) */
     uint32_t temp = port_->MODER;
@@ -70,10 +71,14 @@ bool Stm32Gpio::config(uint32_t mode, uint32_t pull, uint32_t speed) {
     temp |= ((pull) << (position * 2U));
     port_->PUPDR = temp;
 
+    /*=== ↑↑↑ The following code is mostly taken from HAL_GPIO_Init ↑↑↑ ======*/
+    /*=== ↑↑↑ 上面这段代码从 STM32 GPIO 初始化函数 HAL_GPIO_Init 复制而来 ↑↑↑ ===*/
+
     return true;
 }
 
-bool Stm32Gpio::subscribe(bool rising_edge, bool falling_edge, void (*callback)(void*), void* ctx) {
+bool Stm32Gpio::subscribe(bool rising_edge, bool falling_edge, 
+    void (*callback)(void*), void* ctx) {
     uint32_t pin_number = get_pin_number();
     if (pin_number >= N_EXTI) {
         return false; // invalid pin number
@@ -86,11 +91,15 @@ bool Stm32Gpio::subscribe(bool rising_edge, bool falling_edge, void (*callback)(
     /*__atomic_compare_exchange_n 是 C++ 用于执行原子比较和交换操作的内置函数。
     这个函数的作用是比较指针 ptr 指向的值和 expected 指向的值，如果它们相等，
     就将 desired 的值写入 ptr。如果不相等，ptr 的当前值会被写入 expected。*/
-    if (!__atomic_compare_exchange_n(&subscription.port, &no_port, port_, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+    if (!__atomic_compare_exchange_n(&subscription.port, &no_port, port_, 
+        false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
         return false; // already in use
     }
 
-    // The following code is mostly taken from HAL_GPIO_Init
+    /*=== ↓↓↓ The following code is mostly taken from HAL_GPIO_Init ↓↓↓ ======*/
+    /*=== ↓↓↓ 下面这段代码从 STM32 GPIO 初始化函数 HAL_GPIO_Init 复制而来 ↓↓↓ ===*/
+    
+    /*Enable SYSCFG Clock */
     __HAL_RCC_SYSCFG_CLK_ENABLE();
 
     uint32_t temp = SYSCFG->EXTICR[pin_number >> 2U];
@@ -98,7 +107,7 @@ bool Stm32Gpio::subscribe(bool rising_edge, bool falling_edge, void (*callback)(
     temp |= ((uint32_t)(GPIO_GET_INDEX(port_)) << (4U * (pin_number & 0x03U)));
     SYSCFG->EXTICR[pin_number >> 2U] = temp;
 
-
+    /* Clear Rising Falling edge configuration */
     if (rising_edge) {
         EXTI->RTSR |= (uint32_t)pin_mask_;
     } else {
@@ -111,8 +120,12 @@ bool Stm32Gpio::subscribe(bool rising_edge, bool falling_edge, void (*callback)(
         EXTI->FTSR &= ~((uint32_t)pin_mask_);
     }
 
+    /* Clear EXTI line configuration */
     EXTI->EMR &= ~((uint32_t)pin_mask_);
     EXTI->IMR |= (uint32_t)pin_mask_;
+
+    /*=== ↑↑↑ The following code is mostly taken from HAL_GPIO_Init ↑↑↑ ======*/
+    /*=== ↑↑↑ 上面这段代码从 STM32 GPIO 初始化函数 HAL_GPIO_Init 复制而来 ↑↑↑ ===*/
 
     // Clear any previous triggers
     __HAL_GPIO_EXTI_CLEAR_IT(pin_mask_);
