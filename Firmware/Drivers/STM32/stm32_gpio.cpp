@@ -82,6 +82,10 @@ bool Stm32Gpio::subscribe(bool rising_edge, bool falling_edge, void (*callback)(
     struct subscription_t& subscription = subscriptions[pin_number];
 
     GPIO_TypeDef* no_port = nullptr;
+
+    /*__atomic_compare_exchange_n 是 C++ 用于执行原子比较和交换操作的内置函数。
+    这个函数的作用是比较指针 ptr 指向的值和 expected 指向的值，如果它们相等，
+    就将 desired 的值写入 ptr。如果不相等，ptr 的当前值会被写入 expected。*/
     if (!__atomic_compare_exchange_n(&subscription.port, &no_port, port_, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
         return false; // already in use
     }
@@ -140,7 +144,7 @@ void Stm32Gpio::unsubscribe() {
     subscription.port = nullptr; // after this line, the subscription can be reused (possibly by another thread)
 }
 
-void maybe_handle(uint16_t exti_number) {
+extern "C" void maybe_handle(uint16_t exti_number) {
     if(__HAL_GPIO_EXTI_GET_IT(1 << exti_number) == RESET) {
         return; // This interrupt source did not trigger the interrupt line
     }
@@ -155,52 +159,4 @@ void maybe_handle(uint16_t exti_number) {
     if (subscription.callback) {
         (*subscription.callback)(subscription.ctx);
     }
-}
-
-extern "C" {
-
-/** @brief Entrypoint for the EXTI line 0 interrupt. */
-void EXTI0_IRQHandler(void) {
-    maybe_handle(0);
-}
-
-/** @brief Entrypoint for the EXTI line 1 interrupt. */
-void EXTI1_IRQHandler(void) {
-    maybe_handle(1);
-}
-
-/** @brief Entrypoint for the EXTI line 2 interrupt. */
-void EXTI2_IRQHandler(void) {
-    maybe_handle(2);
-}
-
-/** @brief Entrypoint for the EXTI line 3 interrupt. */
-void EXTI3_IRQHandler(void) {
-    maybe_handle(3);
-}
-
-/** @brief Entrypoint for the EXTI line 4 interrupt. */
-void EXTI4_IRQHandler(void) {
-    maybe_handle(4);
-}
-
-/** @brief Entrypoint for the EXTI lines 5-9 interrupt. */
-void EXTI9_5_IRQHandler(void) {
-    maybe_handle(5);
-    maybe_handle(6);
-    maybe_handle(7);
-    maybe_handle(8);
-    maybe_handle(9);
-}
-
-/** @brief This function handles EXTI lines 10-15 interrupt. */
-void EXTI15_10_IRQHandler(void) {
-    maybe_handle(10);
-    maybe_handle(11);
-    maybe_handle(12);
-    maybe_handle(13);
-    maybe_handle(14);
-    maybe_handle(15);
-}
-
 }

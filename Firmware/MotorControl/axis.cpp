@@ -114,6 +114,7 @@ bool Axis::wait_for_control_iteration() {
 // step/direction interface
 void Axis::step_cb() {
     if (step_dir_active_) {
+        /*判断输入方向，决定中断后步进要递减还是递增，steps_ 用于位置闭环位置控制*/
         dir_gpio_.read() ? ++steps_ : --steps_;
         controller_.input_pos_updated();
     }

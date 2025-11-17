@@ -494,7 +494,7 @@ void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef* tim_encoderHandle)
 
 void HAL_TIM_IC_MspInit(TIM_HandleTypeDef* tim_icHandle)
 {
-
+  /*TIM输入捕获模式，捕获 PWM 输入*/
   if(tim_icHandle->Instance==TIM5)
   {
   /* USER CODE BEGIN TIM5_MspInit 0 */

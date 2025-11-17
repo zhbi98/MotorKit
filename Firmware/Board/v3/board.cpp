@@ -153,7 +153,7 @@ std::array<Axis, AXIS_COUNT> axes{{
     },
 }};
 
-PwmInput pwm0_input{nullptr, {0, 0, 0, 0}};
+PwmInput pwm0_input{nullptr, {nullptr, 0}};
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 USBD_HandleTypeDef& usb_dev_handle = hUsbDeviceFS;
@@ -332,22 +332,10 @@ static bool fetch_and_reset_adcs(
 
 extern "C" {
 
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-    HAL_SPI_TxRxCpltCallback(hspi);
-}
-
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
-    HAL_SPI_TxRxCpltCallback(hspi);
-}
-
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
-    if (hspi == &hspi3) {
-        spi3_arbiter.on_complete();
-    }
-}
-
-void TIM5_IRQHandler(void) {
-    COUNT_IRQ(TIM5_IRQn);
+void spi3_tran_end()
+{
+    /*C 调用 C++ 成员函数的包装函数*/
+    spi3_arbiter.on_complete();
 }
 
 volatile uint32_t timestamp_ = 0;
@@ -492,20 +480,4 @@ void ControlLoop_IRQHandler(void) {
     TaskTimer::enabled = false;
 }
 
-void I2C1_EV_IRQHandler(void) {
-    COUNT_IRQ(I2C1_EV_IRQn);
-    HAL_I2C_EV_IRQHandler(&hi2c1);
-}
-
-void I2C1_ER_IRQHandler(void) {
-    COUNT_IRQ(I2C1_ER_IRQn);
-    HAL_I2C_ER_IRQHandler(&hi2c1);
-}
-
-extern PCD_HandleTypeDef hpcd_USB_OTG_FS; // defined in usbd_conf.c
-void OTG_FS_IRQHandler(void) {
-    COUNT_IRQ(OTG_FS_IRQn);
-    HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
-}
-
-}
+} /*extern "C"*/

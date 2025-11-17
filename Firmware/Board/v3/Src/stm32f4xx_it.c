@@ -60,6 +60,9 @@ extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart2;
 
 extern TIM_HandleTypeDef htim14;
+/*Defined in usbd_conf.c*/
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+extern I2C_HandleTypeDef hi2c1;
 
 /******************************************************************************/
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
@@ -367,6 +370,27 @@ void USART2_IRQHandler(void)
   /* USER CODE END USART2_IRQn 1 */
 }
 
+/*↓↓ The Following Add by zhbi98 ↓↓↓*/
+
+/**
+  * @brief  Period elapsed callback in non blocking mode 
+  * @param  htim pointer to a TIM_HandleTypeDef structure that contains
+  *                the configuration information for TIM module.
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM14) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
+
 /**
 * @brief This function handles TIM8 trigger and commutation interrupts and TIM14 global interrupt.
 */
@@ -380,6 +404,55 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
   /* USER CODE BEGIN TIM8_TRG_COM_TIM14_IRQn 1 */
 
   /* USER CODE END TIM8_TRG_COM_TIM14_IRQn 1 */
+}
+
+/*↓↓ The Following Add by zhbi98 ↓↓↓*/
+
+/**
+* @brief This function handles TIM5 trigger and commutation interrupts and TIM14 global interrupt.
+*/
+void TIM5_IRQHandler(void)
+{
+  COUNT_IRQ(TIM5_IRQn);
+  /*pwm0_input.on_capture();*/
+}
+
+extern void spi3_tran_end();
+
+/**
+  * @brief Tx Transfer completed callback.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure that contains
+  *               the configuration information for SPI module.
+  * @retval None
+  */
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  HAL_SPI_TxRxCpltCallback(hspi);
+}
+
+/**
+  * @brief Rx Transfer completed callback.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure that contains
+  *               the configuration information for SPI module.
+  * @retval None
+  */
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  HAL_SPI_TxRxCpltCallback(hspi);
+}
+
+/**
+  * @brief Tx and Rx Transfer completed callback.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure that contains
+  *               the configuration information for SPI module.
+  * @retval None
+  */
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  if (hspi->Instance == SPI3) 
+  {
+    spi3_tran_end();
+  }
 }
 
 /**
@@ -408,6 +481,108 @@ void UART4_IRQHandler(void)
   /* USER CODE BEGIN UART4_IRQn 1 */
 
   /* USER CODE END UART4_IRQn 1 */
+}
+
+/*↓↓ The Following Add by zhbi98 ↓↓↓*/
+
+/**
+  * @brief  This function handles I2C event interrupt request.
+  * @param  hi2c Pointer to a I2C_HandleTypeDef structure that contains
+  *                the configuration information for the specified I2C.
+  * @retval None
+  */
+void I2C1_EV_IRQHandler(void)
+{
+  COUNT_IRQ(I2C1_EV_IRQn);
+  HAL_I2C_EV_IRQHandler(&hi2c1);
+}
+
+/**
+  * @brief  This function handles I2C error interrupt request.
+  * @param  hi2c Pointer to a I2C_HandleTypeDef structure that contains
+  *                the configuration information for the specified I2C.
+  * @retval None
+  */
+void I2C1_ER_IRQHandler(void)
+{
+  COUNT_IRQ(I2C1_ER_IRQn);
+  HAL_I2C_ER_IRQHandler(&hi2c1);
+}
+
+/**
+* @brief This function handles OTG FS global interrupt.
+*/
+void OTG_FS_IRQHandler(void)
+{
+  COUNT_IRQ(OTG_FS_IRQn);
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
+}
+
+extern void maybe_handle(uint16_t exti_number);
+
+/** 
+ * @brief Entrypoint for the EXTI line 0 interrupt. 
+ */
+void EXTI0_IRQHandler(void)
+{
+  maybe_handle(0);
+}
+
+/** 
+ * @brief Entrypoint for the EXTI line 1 interrupt. 
+ */
+void EXTI1_IRQHandler(void)
+{
+  maybe_handle(1);
+}
+
+/** 
+ * @brief Entrypoint for the EXTI line 2 interrupt. 
+ */
+void EXTI2_IRQHandler(void)
+{
+  maybe_handle(2);
+}
+
+/** 
+ * @brief Entrypoint for the EXTI line 3 interrupt. 
+ */
+void EXTI3_IRQHandler(void)
+{
+  maybe_handle(3);
+}
+
+/** 
+ * @brief Entrypoint for the EXTI line 4 interrupt. 
+ */
+void EXTI4_IRQHandler(void)
+{
+  maybe_handle(4);
+}
+
+/** 
+ * @brief Entrypoint for the EXTI lines 5-9 interrupt. 
+ */
+void EXTI9_5_IRQHandler(void)
+{
+  maybe_handle(5);
+  maybe_handle(6);
+  maybe_handle(7);
+  maybe_handle(8);
+  maybe_handle(9);
+}
+
+/**
+ * @brief This function handles EXTI lines 10-15 interrupt. 
+ */
+void EXTI15_10_IRQHandler(void)
+{
+  maybe_handle(10);
+  maybe_handle(11);
+  maybe_handle(12);
+  maybe_handle(13);
+  maybe_handle(14);
+  maybe_handle(15);
 }
 
 /* USER CODE BEGIN 1 */

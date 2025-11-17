@@ -43,52 +43,36 @@ void handle_pulse(int channel, uint32_t high_time) {
                   (fraction * (odrv.config_.pwm_mappings[channel].max - odrv.config_.pwm_mappings[channel].min));
 
     /*解析通过 pulse 通信端口下发的配置指令，然后调用执行配置操作函数*/
-    fibre::set_endpoint_from_float(odrv.config_.pwm_mappings[channel].endpoint, value);
+    /*fibre::set_endpoint_from_float(odrv.config_.pwm_mappings[channel].endpoint, value);*/
 }
-
-Stm32Gpio _nullptr = {nullptr, 0};
 
 /**
  * @param channel: A channel number in [0, 3]
  */
-void PwmInput::on_capture(int channel, uint32_t timestamp) {
-    static uint32_t last_timestamp[4] = { 0 };
-    static bool last_pin_state[4] = { false };
-    static bool last_sample_valid[4] = { false };
+void PwmInput::on_capture(uint32_t timestamp) {
+    static uint32_t last_timestamp = 0;
+    static bool last_pin_state = false;
+    static bool last_sample_valid = false ;
 
-    if (channel >= 4)
-        return;
-    Stm32Gpio gpio = _nullptr/*get_gpio(gpios_[channel])*/;
-    if (!gpio)
-        return;
+    Stm32Gpio gpio = PWM_Pin_;/*get_gpio(gpios_[channel])*/
+    if (!gpio) return;
+
     bool current_pin_state = gpio.read();
 
-    if (last_sample_valid[channel]
-        && (last_pin_state[channel] != PWM_INVERT_INPUT)
+    if (last_sample_valid
+        && (last_pin_state != PWM_INVERT_INPUT)
         && (current_pin_state == PWM_INVERT_INPUT)) {
-        handle_pulse(channel, timestamp - last_timestamp[channel]);
+        handle_pulse(0, timestamp - last_timestamp);
     }
 
-    last_timestamp[channel] = timestamp;
-    last_pin_state[channel] = current_pin_state;
-    last_sample_valid[channel] = true;
+    last_timestamp = timestamp;
+    last_pin_state = current_pin_state;
+    last_sample_valid = true;
 }
 
 void PwmInput::on_capture() {
     if(__HAL_TIM_GET_FLAG(htim_, TIM_FLAG_CC1)) {
         __HAL_TIM_CLEAR_IT(htim_, TIM_IT_CC1);
-        on_capture(0, htim_->Instance->CCR1);
-    }
-    if(__HAL_TIM_GET_FLAG(htim_, TIM_FLAG_CC2)) {
-        __HAL_TIM_CLEAR_IT(htim_, TIM_IT_CC2);
-        on_capture(1, htim_->Instance->CCR2);
-    }
-    if(__HAL_TIM_GET_FLAG(htim_, TIM_FLAG_CC3)) {
-        __HAL_TIM_CLEAR_IT(htim_, TIM_IT_CC3);
-        on_capture(2, htim_->Instance->CCR3);
-    }
-    if(__HAL_TIM_GET_FLAG(htim_, TIM_FLAG_CC4)) {
-        __HAL_TIM_CLEAR_IT(htim_, TIM_IT_CC4);
-        on_capture(3, htim_->Instance->CCR4);
+        on_capture(htim_->Instance->CCR1);
     }
 }
