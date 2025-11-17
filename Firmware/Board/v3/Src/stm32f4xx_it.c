@@ -417,7 +417,7 @@ void TIM5_IRQHandler(void)
   /*pwm0_input.on_capture();*/
 }
 
-extern void spi3_tran_end();
+extern void SPI3_Arbiter_finish();
 
 /**
   * @brief Tx Transfer completed callback.
@@ -451,7 +451,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
   if (hspi->Instance == SPI3) 
   {
-    spi3_tran_end();
+    SPI3_Arbiter_finish();
   }
 }
 

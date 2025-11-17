@@ -36,6 +36,7 @@ bool Encoder::apply_config(ODriveIntf::MotorIntf::MotorType motor_type) {
 }
 
 void Encoder::setup() {
+    /*TIM_CHANNEL_ALL 指代开启 TIM_CHANNEL_1, TIM_CHANNEL_2*/
     HAL_TIM_Encoder_Start(timer_, TIM_CHANNEL_ALL);
     set_idx_subscribe();
 
@@ -71,21 +72,9 @@ bool Encoder::do_checks(){
 //--------------------
 
 /**
- * 在 ODrive 控制库的这段代码中，Encoder::enc_index_cb() 函数是一个回调函数，
+ * 在 ODrive 的 Encoder::enc_index_cb() 函数是一个回调函数，
  * 当编码器检测到索引（Index）信号时会被调用。这个函数主要处理与编码器索引信号
  * 相关的计数器和状态更新。
- * 
- * set_circular_count(0, false);
- * 这行代码用于设置编码器的“循环计数”（circular count），将计数值重置为0。
- * 参数 false 表示不启用自动偏移校准功能（如果有的话）。通过重置循环计数，
- * 系统可以基于索引脉冲来重新确定电机位置的基准点。
- * 
- * set_linear_count((int32_t)(config_.index_offset * config_.cpr));
- * 这行代码用于设置编码器的“线性计数”（linear count）。
- * 计算方式是将配置中的索引偏移值 config_.index_offset 
- * 乘以编码器每转脉冲数（CPR：Counts Per Revolution）。这样做的目的是在每次检测到索引信号时，
- * 根据预设的偏移量调整电机的位置估计。例如，如果需要在索引信号处加上或减去一定的角度或者圈数，
- * 可以通过配置 index_offset 来实现。
  */
 // Triggered when an encoder passes over the "Index" pin
 // TODO: only arm index edge interrupt when we know encoder has powered up
@@ -93,9 +82,15 @@ bool Encoder::do_checks(){
 void Encoder::enc_index_cb() {
     /*检查是否启用了 Z 索引信号*/
     if (config_.use_index) {
-        /*索引脉冲信号圈数计算，已旋转一圈，清除脉冲累积*/
+        /*捕获到 Index 脉冲，将编码器的 "循环计数" circular count 清零。
+        false 表示不启用自动偏移校准功能（如果有的话）。通过重置循环计数，
+        系统可以基于索引脉冲来重新确定电机位置的基准点。*/
         set_circular_count(0, false);
         if (config_.use_index_offset)
+            /*捕获到 Index 脉冲，将编码器的 "循环计数" linear count 清零。
+            计算方式是将配置中的索引偏移值 index_offset 乘以编码器每转脉冲数 CPR。
+            对于线性计数每次捕获到索引信号时，把计数设置为预设的偏移量，
+            有偏移量那么零点就是预设的固定偏移量。*/
             set_linear_count((int32_t)(config_.index_offset * config_.cpr));
         if (config_.pre_calibrated) {
             is_ready_ = true;
@@ -103,8 +98,8 @@ void Encoder::enc_index_cb() {
                 axis_->controller_.anticogging_valid_ = true;
             }
         } else {
-            /*我们不能在 set_circular_count 使用 update_offset，因为我们还在有机会更新之前设置线性计数。
-            因此使 idx 搜索之前可能发生的偏移校准失效*/
+            /*我们不能在 set_circular_count 使用 update_offset，
+            因为我们还在有机会更新之前设置线性计数。因此使 Index 搜索之前可能发生的偏移校准失效*/
             // We can't use the update_offset facility in set_circular_count because
             // we also set the linear count before there is a chance to update. Therefore:
             // Invalidate offset calibration that may have happened before idx search
@@ -112,6 +107,10 @@ void Encoder::enc_index_cb() {
         }
         index_found_ = true;
     }
+
+    /*为什么要 Disable interrupt，这样不就没法再捕获 Index 信号了吗？
+    因为索引（Index）通常只需要开机时作为 "单次参考点" 来同步/校准编码器位置。
+    enc_index_cb 在找到索引后就不需要使用了，关闭中断可以避免再次触发索引归零。*/
 
     // Disable interrupt
     index_gpio_.unsubscribe();

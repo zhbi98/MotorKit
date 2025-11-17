@@ -343,7 +343,8 @@ static bool fetch_and_reset_adcs(
 
 extern "C" {
 
-void spi3_tran_end()
+/*C 调用 C++ 成员函数的包装函数*/
+void SPI3_Arbiter_finish()
 {
     /*C 调用 C++ 成员函数的包装函数*/
     spi3_arbiter.on_complete();

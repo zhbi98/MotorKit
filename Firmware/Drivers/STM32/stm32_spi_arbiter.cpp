@@ -5,7 +5,8 @@
 #include <cmsis_os.h>
 
 bool Stm32SpiArbiter::acquire_task(SpiTask* task) {
-    return !__atomic_exchange_n(&task->is_in_use, true, __ATOMIC_SEQ_CST);
+    return !__atomic_exchange_n(&task->is_in_use, 
+        true, __ATOMIC_SEQ_CST);
 }
 
 void Stm32SpiArbiter::release_task(SpiTask* task) {
@@ -13,24 +14,27 @@ void Stm32SpiArbiter::release_task(SpiTask* task) {
 }
 
 bool Stm32SpiArbiter::start() {
-    if (!task_list_) {
-        return false;
-    }
+    if (!task_list_) return false;
 
     SpiTask& task = *task_list_;
     task.ncs_gpio.write(false);
     
     HAL_StatusTypeDef status = HAL_ERROR;
 
-    if (hspi_->hdmatx->State != HAL_DMA_STATE_READY || hspi_->hdmarx->State != HAL_DMA_STATE_READY) {
-        // This can happen if the DMA or interrupt priorities are not configured properly.
+    if (hspi_->hdmatx->State != HAL_DMA_STATE_READY || 
+        hspi_->hdmarx->State != HAL_DMA_STATE_READY) {
+        /*This can happen if the DMA or interrupt priorities 
+        are not configured properly.*/
         status = HAL_BUSY;
     } else if (task.tx_buf && task.rx_buf) {
-        status = HAL_SPI_TransmitReceive_DMA(hspi_, (uint8_t*)task.tx_buf, task.rx_buf, task.length);
+        status = HAL_SPI_TransmitReceive_DMA(hspi_, 
+            (uint8_t*)task.tx_buf, task.rx_buf, task.length);
     } else if (task.tx_buf) {
-        status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.length);
+        status = HAL_SPI_Transmit_DMA(hspi_, 
+            (uint8_t*)task.tx_buf, task.length);
     } else if (task.rx_buf) {
-        status = HAL_SPI_Receive_DMA(hspi_, task.rx_buf, task.length);
+        status = HAL_SPI_Receive_DMA(hspi_, 
+            task.rx_buf, task.length);
     }
 
     if (status != HAL_OK) {
@@ -63,11 +67,8 @@ void Stm32SpiArbiter::transfer_async(SpiTask* task) {
 
     // If the list was empty before, kick off the SPI arbiter now
 
-    /**
-     * 如果 ptr 指针指向任务链表的首地址，则说明前面遍历操作没有找到任何任务节点，就是说任务链表是空的，
-     * 如果任务链表是空的那就直接启动发送操作，如果任务链表不是空的，则只把待发送数据以任务节点的方式放入链表中，
-     * 不立即发送，而是按照排队的操作等待发送
-     */
+    /**如果 ptr 指针指向任务链表的首地址，说明任务链表是空的，不需要排队可以直接启动发送操作，
+     * 如果任务链表非空，则只把待发送数据以任务节点的方式放入链表中，等待排队处理。*/
     if (ptr == &task_list_) {
         if (!start()) {
             if (task->end_callback) {
@@ -78,20 +79,18 @@ void Stm32SpiArbiter::transfer_async(SpiTask* task) {
 }
 
 // TODO: this currently only works when called in a CMSIS thread.
-bool Stm32SpiArbiter::transfer(Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t length, uint32_t timeout_ms) {
+bool Stm32SpiArbiter::transfer(Stm32Gpio ncs_gpio, const uint8_t* tx_buf, 
+    uint8_t* rx_buf, size_t length, uint32_t timeout_ms) {
     volatile uint8_t result = 0xff;
 
-    /**
-     * 虽然在启动时 SPI 统一初始化了同一的 SPI 模式，但是那个统一的初始化结构体不能适应所有使用了 SPI 的硬件模块，
-     * 所以每个使用了 SPI 的硬件模块中会定义一个属于自己模式的 SPI 初始化结构体，并将这个结构体传递到这里使用。
-     * 所以这就是为什么在 ODive 中每个硬件模块中还会定义一个 SPI 初始化结构体（例如 DRV8301 以及编码中都会定义）。
-     */
     SpiTask task = {
         .ncs_gpio = ncs_gpio,
         .tx_buf = tx_buf,
         .rx_buf = rx_buf,
         .length = length,
-        .end_callback = [](void* ctx, bool success) { *(volatile uint8_t*)ctx = success ? 1 : 0; },
+        .end_callback = [](void* ctx, bool success) {
+            *(volatile uint8_t*)ctx = success ? 1 : 0;
+        },
         .parm = (void*)&result,
         .is_in_use = false,
         .next = nullptr
@@ -99,8 +98,8 @@ bool Stm32SpiArbiter::transfer(Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_
 
     transfer_async(&task);
 
-    /**result 正常情况下表征数据发送成功或失败，所以值一般为 0/1，
-    如果依旧为初始值 0xFF 则说明发生了未知异常*/
+    /**result 正常情况下表示发送成功或失败，所以值一般为 false/true，
+    如果依旧为初始值 0xFF 则说明当前发送任务还没有完成，在此等待完成*/
     while (result == 0xff) {
         osDelay(1); // TODO: honor timeout
     }

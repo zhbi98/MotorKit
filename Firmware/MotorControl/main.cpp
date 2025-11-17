@@ -187,6 +187,7 @@ uint64_t ODrive::get_drv_fault() {
 #endif
 }
 
+/**清除电机所有错误，清除错误后电机才能继续接收运行指令*/
 void ODrive::clear_errors() {
     for (auto& axis: axes) {
         axis.motor_.error_ = Motor::ERROR_NONE;
