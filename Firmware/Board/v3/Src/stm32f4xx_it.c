@@ -520,12 +520,50 @@ void OTG_FS_IRQHandler(void)
 
 extern void maybe_handle(uint16_t exti_number);
 
+/**
+  * @brief  EXTI line detection callbacks.
+  * @param  GPIO_Pin Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  /* Prevent unused argument(s) compilation warning */
+  /* UNUSED(GPIO_Pin);*/
+  /* NOTE: This function Should not be modified, when the callback is needed,
+           the HAL_GPIO_EXTI_Callback could be implemented in the user file
+   */
+  if (GPIO_Pin == GPIO_PIN_0) {maybe_handle(0);}
+  else if (GPIO_Pin == GPIO_PIN_1) {maybe_handle(1);}
+  else if (GPIO_Pin == GPIO_PIN_2) {maybe_handle(2);}
+  else if (GPIO_Pin == GPIO_PIN_3) {maybe_handle(3);}
+  else if (GPIO_Pin == GPIO_PIN_4) {maybe_handle(4);}
+  else if (GPIO_Pin == GPIO_PIN_5) {maybe_handle(5);}
+  else if (GPIO_Pin == GPIO_PIN_6) {maybe_handle(6);}
+  else if (GPIO_Pin == GPIO_PIN_7) {maybe_handle(7);}
+  else if (GPIO_Pin == GPIO_PIN_8) {maybe_handle(8);}
+  else if (GPIO_Pin == GPIO_PIN_9) {maybe_handle(9);}
+  else if (GPIO_Pin == GPIO_PIN_10) {maybe_handle(10);}
+  else if (GPIO_Pin == GPIO_PIN_11) {maybe_handle(11);}
+  else if (GPIO_Pin == GPIO_PIN_12) {maybe_handle(12);}
+  else if (GPIO_Pin == GPIO_PIN_13) {maybe_handle(13);}
+  else if (GPIO_Pin == GPIO_PIN_14) {maybe_handle(14);}
+  else if (GPIO_Pin == GPIO_PIN_15) {maybe_handle(15);}
+  else {}
+}
+
+
 /** 
  * @brief Entrypoint for the EXTI line 0 interrupt. 
  */
 void EXTI0_IRQHandler(void)
 {
-  maybe_handle(0);
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+  /* USER CODE END EXTI0_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
 }
 
 /** 
@@ -533,7 +571,13 @@ void EXTI0_IRQHandler(void)
  */
 void EXTI1_IRQHandler(void)
 {
-  maybe_handle(1);
+  /* USER CODE BEGIN EXTI1_IRQn 0 */
+
+  /* USER CODE END EXTI1_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
+  /* USER CODE BEGIN EXTI1_IRQn 1 */
+
+  /* USER CODE END EXTI1_IRQn 1 */
 }
 
 /** 
@@ -541,7 +585,13 @@ void EXTI1_IRQHandler(void)
  */
 void EXTI2_IRQHandler(void)
 {
-  maybe_handle(2);
+  /* USER CODE BEGIN EXTI2_IRQn 0 */
+
+  /* USER CODE END EXTI2_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+  /* USER CODE BEGIN EXTI2_IRQn 1 */
+
+  /* USER CODE END EXTI2_IRQn 1 */
 }
 
 /** 
@@ -549,7 +599,13 @@ void EXTI2_IRQHandler(void)
  */
 void EXTI3_IRQHandler(void)
 {
-  maybe_handle(3);
+  /* USER CODE BEGIN EXTI3_IRQn 0 */
+
+  /* USER CODE END EXTI3_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
+  /* USER CODE BEGIN EXTI3_IRQn 1 */
+
+  /* USER CODE END EXTI3_IRQn 1 */
 }
 
 /** 
@@ -557,7 +613,13 @@ void EXTI3_IRQHandler(void)
  */
 void EXTI4_IRQHandler(void)
 {
-  maybe_handle(4);
+  /* USER CODE BEGIN EXTI4_IRQn 0 */
+
+  /* USER CODE END EXTI4_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
+  /* USER CODE BEGIN EXTI4_IRQn 1 */
+
+  /* USER CODE END EXTI4_IRQn 1 */
 }
 
 /** 
@@ -565,11 +627,21 @@ void EXTI4_IRQHandler(void)
  */
 void EXTI9_5_IRQHandler(void)
 {
-  maybe_handle(5);
-  maybe_handle(6);
-  maybe_handle(7);
-  maybe_handle(8);
-  maybe_handle(9);
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+
+  /*虽然调用了每一个，但内部会判断具体发生中断的管脚，
+  然后将管脚号传递到HAL_GPIO_EXTI_Callback函数形参中*/
+
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_5);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_6);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_7);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
 }
 
 /**
@@ -577,12 +649,21 @@ void EXTI9_5_IRQHandler(void)
  */
 void EXTI15_10_IRQHandler(void)
 {
-  maybe_handle(10);
-  maybe_handle(11);
-  maybe_handle(12);
-  maybe_handle(13);
-  maybe_handle(14);
-  maybe_handle(15);
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+
+  /*虽然调用了每一个，但内部会判断具体发生中断的管脚，
+  然后将管脚号传递到HAL_GPIO_EXTI_Callback函数形参中*/
+
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_10);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_14);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

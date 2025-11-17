@@ -145,11 +145,11 @@ void Stm32Gpio::unsubscribe() {
 }
 
 extern "C" void maybe_handle(uint16_t exti_number) {
-    if(__HAL_GPIO_EXTI_GET_IT(1 << exti_number) == RESET) {
+    if(0/*__HAL_GPIO_EXTI_GET_IT(1 << exti_number) == RESET*/) {
         return; // This interrupt source did not trigger the interrupt line
     }
 
-    __HAL_GPIO_EXTI_CLEAR_IT(1 << exti_number);
+    /*__HAL_GPIO_EXTI_CLEAR_IT(1 << exti_number);*/
     
     if (exti_number >= N_EXTI) {
         return;
