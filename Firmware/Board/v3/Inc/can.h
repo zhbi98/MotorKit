@@ -70,6 +70,8 @@ extern CAN_HandleTypeDef hcan1;
 extern void _Error_Handler(char *, int);
 
 void MX_CAN1_Init(void);
+void CAN_Send(CAN_TxHeaderTypeDef * pHeader, uint8_t * data);
+void CAN_Set_BaudRate(uint32_t baudrate);
 
 /* USER CODE BEGIN Prototypes */
 

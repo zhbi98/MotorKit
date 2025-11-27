@@ -1,10 +1,10 @@
-## ODriveS
+## ODriveX
 
-ODriveS 是一款基于 STM32F405 的高性能开源磁场定向控制（FOC）驱动器，逆变电路采用了英飞凌的 DirectFET-MOS 管，支持高达 100A 持续电流 和 3kW 电机功率，适用于机器人、无人机、CNC 等高动态应用场景。
+一款基于 STM32F405 的高性能开源磁场定向控制（FOC）驱动器，逆变电路采用了英飞凌的 DirectFET-MOS 管，支持高达 100A 持续电流 和 3kW 电机功率，适用于机器人、无人机、CNC 等高动态应用场景。
 
 ![image.png](./Image/20240122202914.jpg)
 
-# 核心特性
+## 核心特性
 
 (1) 高性能功率级：英飞凌 DirectFET MOSFET，60V 耐压，单路 100A 峰值电流
 
@@ -56,7 +56,7 @@ PCB 上预留了 SWD 调试接口，固件固件就可以使用 SWD 下载。
 
 ## Configuration
 
-控制参数（例如 PID，电流，速度限制等等）都是包含默认值的，所以不需要逐个配置参数电机也能正常工作起来的，必须要注意的是根据实际编码器配置 cpr，index 参数，根据电机配置极对数 pole pairs（例如大疆 2312s 电机的极对数为 7），以及按实际调整电流采样电阻，配置一些必须变更的即可。
+控制参数（例如 PID，电流，速度限制等等）都是包含默认值的，所以不需要逐个配置参数电机也能正常工作起来的，必须要注意的是根据实际编码器配置 cpr（例如 AS5047P 编码器使用 ABZ 接口时 CPR 为 1000x4=4000），index 参数，根据电机配置极对数 pole pairs（例如大疆 2312s 电机的极对数为 7），以及按实际调整电流采样电阻，配置一些必须变更的即可。
 
 什么是极对数？
 
@@ -79,6 +79,9 @@ PCB 上预留了 SWD 调试接口，固件固件就可以使用 SWD 下载。
 (7) 电机因异常停止后清除错误重新使能进入闭环状态即可。
 
 ## Command
+
+CAN 通信协议和 Shell 交互命令实现分别位于 [communication/can/odrive_can.cpp](communication/can/odrive_can.cpp) 和 [ThirdParty/LetterShell/src/shell_cmd_list.c](ThirdParty/LetterShell/src/shell_cmd_list.c) 文件，具体可查看这两个文件，这里列出电机运行起来必要的 Shell 指令，使用 USB 数据线线连接板子 TypeC 和 PC，在 PC 上使用串口调试助手
+下发下列指令即可控制。
 
 ```cpp
 设置最大负电流

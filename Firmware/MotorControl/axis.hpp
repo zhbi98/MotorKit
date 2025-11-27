@@ -53,7 +53,9 @@ public:
     static LockinConfig_t default_sensorless();
     static LockinConfig_t default_lockin();
 
-    struct CANConfig_t {
+    /*Information structure required 
+    for CAN communication response*/
+    /*struct CANConfig_t {
         uint32_t node_id = 0;
         bool is_extended = false;
         uint32_t heartbeat_rate_ms = 100;
@@ -66,7 +68,7 @@ public:
         uint32_t iq_rate_ms = 0;
         uint32_t sensorless_rate_ms = 0;
         uint32_t bus_vi_rate_ms = 0;
-    };
+    };*/
 
     struct Config_t {
         bool startup_motor_calibration = false;   //<! run motor calibration at startup, skip otherwise
@@ -93,7 +95,9 @@ public:
         LockinConfig_t sensorless_ramp = default_sensorless();
         LockinConfig_t general_lockin;
 
-        CANConfig_t can;
+        /*Information structure required 
+        for CAN communication response*/
+        /*CANConfig_t can;*/
 
         // custom setters
         Axis* parent = nullptr;
@@ -103,7 +107,9 @@ public:
         bool is_homed = false;
     };
 
-    struct CAN_t {
+    /*Information structure required 
+    for CAN communication response*/
+    /*struct CAN_t {
         uint32_t last_heartbeat = 0;
         uint32_t last_encoder = 0;
         uint32_t last_motor_error = 0;
@@ -114,7 +120,7 @@ public:
         uint32_t last_iq = 0;
         uint32_t last_sensorless = 0;
         uint32_t last_bus_vi = 0;
-    };
+    };*/
 
     Axis(int axis_num,
             Stm32Gpio step_gpio,
@@ -158,6 +164,7 @@ public:
     bool run_idle_loop();
 
     constexpr uint32_t get_watchdog_reset() {
+        /*UINT32_MAX 是由编译器定义的一个宏定义，表示无符号 32 位整型的最大值。这个宏定义在 stdint.h 头文件中定义，用于表示 32 位整数的最大值。*/
         return static_cast<uint32_t>(std::clamp<float>(config_.watchdog_timeout, 0, UINT32_MAX / (current_meas_hz + 1)) * current_meas_hz);
     }
 
@@ -198,7 +205,9 @@ public:
     std::array<AxisState, 10> task_chain_ = { AXIS_STATE_UNDEFINED };
     AxisState& current_state_ = task_chain_.front();
     Homing_t homing_;
-    CAN_t can_;
+    /*Information structure required 
+    for CAN communication response*/
+    /*CAN_t can_;*/
 
 
     // watchdog

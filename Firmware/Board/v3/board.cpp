@@ -243,6 +243,9 @@ bool board_init() {
     huart2.Init.BaudRate = 115200;
     MX_USART2_UART_Init();
 
+    /*CAN 调试时保证收发器 +5V 供电正常，收发器工作在 +5V 电压。*/
+    MX_CAN1_Init();
+
     // Ensure that debug halting of the core doesn't leave the motor PWM running
     __HAL_DBGMCU_FREEZE_TIM1();
     __HAL_DBGMCU_FREEZE_TIM8();
@@ -365,6 +368,14 @@ void SPI3_Arbiter_finish()
     /*C 调用 C++ 成员函数的包装函数*/
     spi3_arbiter.on_complete();
 }
+
+/*C 调用 C++ 成员函数的包装函数*/
+bool CAN_ApplyCmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
+{
+    /*C 调用 C++ 成员函数的包装函数*/
+    return odrv.can_.apply_cmd(_cmd, _data, _len);
+}
+
 
 volatile uint32_t timestamp_ = 0;
 volatile bool counting_down_ = false;

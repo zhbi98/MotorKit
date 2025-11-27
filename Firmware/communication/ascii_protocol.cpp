@@ -151,7 +151,7 @@ extern "C" int cmd_vbus_voltage()
 {
     float vbus = odrv.vbus_voltage_;
     logInfo("%5f", vbus);
-    return 0;
+    return 1;
 }
 
 // @brief Executes the set position command
@@ -351,6 +351,27 @@ void AsciiProtocol::cmd_set_position_wl(char * pStr, bool use_checksum) {
     }
 }
 
+// @brief Executes the set position command
+// @param pStr buffer of ASCII encoded values
+// @param response_channel reference to the stream to respond on
+// @param use_checksum bool to indicate whether a checksum is required on response
+extern "C" int cmd_axis_controller_config_pos_again(int motor_id, char * _pos_gain)
+{
+    uint8_t len = strlen(_pos_gain);
+    double pos_gain = 0.0f;
+
+    if (motor_id < 0 || motor_id > 1) return 0;
+    if ((!len) || (len > 16)) return 0;
+
+    pos_gain = atof(_pos_gain);
+    Axis& axis = axes[motor_id];
+    axis.controller_.config_.pos_gain = pos_gain;
+
+    logInfo("%5lf", pos_gain);
+
+    return 1;
+}
+
 // @brief Executes the set velocity command
 // @param pStr buffer of ASCII encoded values
 // @param response_channel reference to the stream to respond on
@@ -373,6 +394,33 @@ void AsciiProtocol::cmd_set_velocity(char * pStr, bool use_checksum) {
             axis.controller_.input_torque_ = torque_feed_forward;
         axis.watchdog_feed();
     }
+}
+
+// @brief Executes the set position command
+// @param pStr buffer of ASCII encoded values
+// @param response_channel reference to the stream to respond on
+// @param use_checksum bool to indicate whether a checksum is required on response
+extern "C" int cmd_axis_controller_config_vel_gain(int motor_id, char * _vel_gain, char * _vel_igain)
+{
+    uint8_t len = strlen(_vel_gain);
+    double vel_gain = 0.0f;
+    double vel_igain = 0.0f;
+
+    if (motor_id < 0 || motor_id > 1) return 0;
+    if ((!len) || (len > 16)) return 0;
+
+    len = strlen(_vel_igain);
+    if ((!len) || (len > 16)) return 0;
+
+    vel_gain = atof(_vel_gain);
+    vel_igain = atof(_vel_igain);
+    Axis& axis = axes[motor_id];
+    axis.controller_.config_.vel_gain = vel_gain;
+    axis.controller_.config_.vel_integrator_gain = vel_igain;
+
+    logInfo("%5lf, %5lf", vel_gain, vel_igain);
+
+    return 1;
 }
 
 // @brief Executes the set torque control command
@@ -556,6 +604,30 @@ extern "C" int cmd_dev_config(char * _config)
 
     logInfo("%s", _config);
     return 1;
+}
+
+// @brief Executes the set position command
+// @param pStr buffer of ASCII encoded values
+// @param response_channel reference to the stream to respond on
+// @param use_checksum bool to indicate whether a checksum is required on response
+extern "C" int cmd_can_set_nodeId(int nodeId)
+{
+    if (nodeId < 0 || nodeId > 15) return 0;
+    odrv.can_.config_.node_id = nodeId;
+    logInfo("h%x", nodeId);
+    return 1;
+}
+
+// @brief Executes the set position command
+// @param pStr buffer of ASCII encoded values
+// @param response_channel reference to the stream to respond on
+// @param use_checksum bool to indicate whether a checksum is required on response
+extern "C" int cmd_can_set_baudrate(int baudrate)
+{
+    if (baudrate < 0 || baudrate > 1000000) return 0;
+    CAN_Set_BaudRate(baudrate);
+    logInfo("%d", baudrate);
+    return 0;
 }
 
 // @brief Executes the system control command

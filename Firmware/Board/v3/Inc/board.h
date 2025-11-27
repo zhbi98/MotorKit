@@ -36,7 +36,9 @@ ERROR_PHASE_INDUCTANCE_OUT_OF_RANGE 错误。*/
 /*----------------------------*/
 
 #define AXIS_COUNT (2)
-#define CAN_FREQ (2000000UL)
+#define CAN_CLK_MHZ (42UL)
+#define CAN_CLK_HZ (42000000UL)
+#define CAN_FREQ (2000000UL) /*42M/(16tq+4tq+1)*/
 
 #define DEFAULT_BRAKE_RESISTANCE (2.0f) // [ohm]
 #define DEFAULT_MIN_DC_VOLTAGE 8.0f

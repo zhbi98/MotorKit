@@ -82,7 +82,6 @@ bool Axis::apply_config() {
 
 void Axis::clear_config() {
     config_ = {};
-    config_.can.node_id = axis_num_;
 }
 
 static void run_state_machine_loop_wrapper(void* ctx) {
@@ -113,6 +112,7 @@ bool Axis::wait_for_control_iteration() {
 // step/direction interface
 void Axis::step_cb() {
     if (step_dir_active_) {
+        /*低频 GPIO 控制模式，外部电平输入步数累计（中断次数累计），注意不是 PWM 输入控制模式，类似 CAN/USB/UASRT 控制模式。*/
         /*判断输入方向，决定中断后步进要递减还是递增，steps_ 用于位置闭环位置控制*/
         dir_gpio_.read() ? ++steps_ : --steps_;
         controller_.input_pos_updated();
@@ -280,6 +280,7 @@ bool Axis::start_closed_loop_control() {
             controller_.pos_wrap_src_.disconnect();
             controller_.vel_estimate_src_.connect_to(&sensorless_estimator_.vel_estimate_);
         } else if (controller_.config_.load_encoder_axis < AXIS_COUNT) {
+            /*load_encoder_axis 用来指定 “要载入（或镜像）的编码器来自哪个轴（axis）” 的索引，可以把把控制器的估计源连接到另一个轴的编码器上。*/
             Axis* ax = &axes[controller_.config_.load_encoder_axis];
             controller_.pos_estimate_circular_src_.connect_to(&ax->encoder_.pos_circular_);
             controller_.pos_wrap_src_.connect_to(&controller_.config_.circular_setpoint_range);

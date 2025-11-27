@@ -17,6 +17,8 @@ osSemaphoreId sem_can;
 __attribute__((section(".ccmram")))
 #endif
 uint8_t ucHeap[configTOTAL_HEAP_SIZE];
+// FreeRTOS 允许应用程序开发者在外部定义堆的数组，同时利用 ".ccmram" 指令，将
+// FreeRTOS 的堆数组放在 STM32 的 ccm 内存（CCM-RAM）中可以获得更好的性能。
 
 uint32_t _reboot_cookie __attribute__ ((section (".noinit")));
 extern char _estack; // provided by the linker script
@@ -28,13 +30,13 @@ ODrive odrv{};
 ConfigManager config_manager;
 
 static bool config_read_all() {
-    /**从 NVM (芯片 Flash) 中加载 (读取) '板载配置参数'，
+    /**从 NVM (芯片 Flash) 中加载 (读取) '板载配置参数' config_ 字段，
     编码器偏移校准参数到指定的各个结构体对象指针（内存）中。*/
     bool success = board_read_config() &&
            config_manager.read(&odrv.config_) &&
            config_manager.read(&odrv.can_.config_);
 
-    /**从 NVM (芯片 Flash) 中加载 (读取) '电机配置参数'，
+    /**从 NVM (芯片 Flash) 中加载 (读取) '电机配置参数'，config_ 字段，
     编码器偏移校准参数到指定的各个结构体对象指针（内存）中。*/
     for (size_t i = 0; (i < AXIS_COUNT) && success; ++i) {
         success = config_manager.read(&encoders[i].config_) &&
@@ -53,6 +55,8 @@ static bool config_read_all() {
 }
 
 static bool config_write_all() {
+    /**板载配置参数没有集中定义，而是分布定义到各个对象的 config_ 字段，
+     * 各个对象的config_ 字段写入 NVM (芯片 Flash) 中。*/
     bool success = board_write_config() &&
            config_manager.write(&odrv.config_) &&
            config_manager.write(&odrv.can_.config_);
@@ -220,7 +224,7 @@ void vApplicationIdleHook(void) {
         /*odrv.system_stats_.max_stack_usage_usb = stack_size_usb_thread - uxTaskGetStackHighWaterMark(usb_thread) * sizeof(StackType_t); Modify by zhbi98*/
         /*odrv.system_stats_.max_stack_usage_uart = stack_size_uart_thread - uxTaskGetStackHighWaterMark(uart_thread) * sizeof(StackType_t); Modify by zhbi98*/
         odrv.system_stats_.max_stack_usage_startup = stack_size_default_task - uxTaskGetStackHighWaterMark(defaultTaskHandle) * sizeof(StackType_t);
-        odrv.system_stats_.max_stack_usage_can = odrv.can_.stack_size_ - uxTaskGetStackHighWaterMark(odrv.can_.thread_id_) * sizeof(StackType_t);
+        /*odrv.system_stats_.max_stack_usage_can = odrv.can_.stack_size_ - uxTaskGetStackHighWaterMark(odrv.can_.thread_id_) * sizeof(StackType_t);*/
         odrv.system_stats_.max_stack_usage_analog =  stack_size_analog_thread - uxTaskGetStackHighWaterMark(analog_thread) * sizeof(StackType_t);
 
         odrv.system_stats_.stack_size_axis = axes[0].stack_size_;
@@ -234,7 +238,7 @@ void vApplicationIdleHook(void) {
         /*odrv.system_stats_.prio_usb = osThreadGetPriority(usb_thread); Modify by zhbi98*/
         /*odrv.system_stats_.prio_uart = osThreadGetPriority(uart_thread); Modify by zhbi98*/
         odrv.system_stats_.prio_startup = osThreadGetPriority(defaultTaskHandle);
-        odrv.system_stats_.prio_can = osThreadGetPriority(odrv.can_.thread_id_);
+        /*odrv.system_stats_.prio_can = osThreadGetPriority(odrv.can_.thread_id_);*/
         odrv.system_stats_.prio_analog = osThreadGetPriority(analog_thread);
     }
 }
@@ -611,12 +615,12 @@ extern "C" int main(void) {
     bool success = config_manager.start_load()
             && config_read_all()
             && config_manager.finish_load(&config_size)
-            && config_apply_all();
+            && config_apply_all();/*读取后将设置应用到驱动*/
     if (success) {
         odrv.user_config_loaded_ = config_size;
     } else {
         config_clear_all();
-        config_apply_all();
+        config_apply_all(); /*将默认的参数应用到驱动*/
     }
 
     // Init board-specific peripherals

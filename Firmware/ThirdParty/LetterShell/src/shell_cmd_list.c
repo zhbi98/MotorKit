@@ -40,9 +40,13 @@ int cmd_axis_requested_state(int motor_id, int _state);
 int cmd_axis_controller_input_pos(int motor_id, char * _pos_setpoint);
 int cmd_axis_controller_input_vel(int motor_id, char * _vel_setpoint);
 int cmd_axis_controller_input_torque(int motor_id, char * _torque_setpoint);
+int cmd_axis_controller_config_pos_again(int motor_id, char * _pos_gain);
+int cmd_axis_controller_config_vel_gain(int motor_id, char * _vel_gain, char * _vel_igain);
 int cmd_axis_controller_config_control_mode(int motor_id, int _mode);
 int cmd_axis_controller_config_vel_limit(int motor_id, char * _vel_lim);
 int cmd_config_dc_max_negative_current(char * _current);
+int cmd_can_set_nodeId(int nodeId);
+int cmd_can_set_baudrate(int baudrate);
 int dumperrors(int clear);
 
 /**
@@ -120,6 +124,14 @@ const ShellCommand shellCommandList[] =
                    controller_input_vel, cmd_axis_controller_input_vel, controller_input_vel),
     SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
                    controller_input_torque, cmd_axis_controller_input_torque, controller_input_torque),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
+                   controller_config_pos_again, cmd_axis_controller_config_pos_again, controller_config_pos_again),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
+                   controller_config_vel_gain, cmd_axis_controller_config_vel_gain, controller_config_vel_gain),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
+                   set_can_nodeId, cmd_can_set_nodeId, set_can_nodeId),
+    SHELL_CMD_ITEM(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC),
+                   set_can_baudrate, cmd_can_set_baudrate, set_can_baudrate),
 };
 
 

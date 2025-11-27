@@ -203,8 +203,12 @@ bool Controller::update() {
                 set_error(ERROR_INVALID_CIRCULAR_RANGE);
                 return false;
             }
+            /*input_pos_ 的单位是 turn，因为编码器提供的电机输出轴位置单位为 turn，
+            所以 step 要除以一圈对应的步数 steps 转化为转数 (turns)*/
             input_pos_ = (float)(axis_->steps_ % config_.steps_per_circular_range) * (*pos_wrap / (float)(config_.steps_per_circular_range));
         } else {
+            /*input_pos_ 的单位是 turn，因为编码器提供的电机输出轴位置单位为 turn，
+            所以 step 要除以一圈对应的步数 steps 转化为转数 (turns)*/
             input_pos_ = (float)(axis_->steps_) / (float)(config_.steps_per_circular_range);
         }
     }

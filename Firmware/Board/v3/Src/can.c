@@ -49,53 +49,102 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "can.h"
-
+#include "board.h"
 #include "gpio.h"
 
 /* USER CODE BEGIN 0 */
 
+/*CAN Tx message header structure definition.*/
+CAN_TxHeaderTypeDef TxHeader = {0};
+/*CAN Rx message header structure definition.*/
+CAN_RxHeaderTypeDef RxHeader = {0};
+
+CAN_HandleTypeDef hcan1 = {0};
+
+uint8_t TxData[8] = {0};
+uint8_t RxData[8] = {0};
+
+uint32_t TxMailbox = 0;
+uint16_t PrescClK = 8;
+
 /* USER CODE END 0 */
 
-CAN_HandleTypeDef hcan1 = {
-  .Instance = CAN1,
-  .Init = {
-    .Prescaler = 8,
-    .Mode = CAN_MODE_NORMAL,
-    .SyncJumpWidth = CAN_SJW_4TQ,
-    .TimeSeg1 = CAN_BS1_16TQ,
-    .TimeSeg2 = CAN_BS2_4TQ,
-    .TimeTriggeredMode = DISABLE,
-    .AutoBusOff = ENABLE,
-    .AutoWakeUp = ENABLE,
-    .AutoRetransmission = ENABLE,
-    .ReceiveFifoLocked = DISABLE,
-    .TransmitFifoPriority = DISABLE,
-  }
-};
-
 /* CAN1 init function */
-//void MX_CAN1_Init(void)
-//{
-//
-//  hcan1.Instance = CAN1;
-//  hcan1.Init.Prescaler = 8;
-//  hcan1.Init.Mode = CAN_MODE_NORMAL;
-//  hcan1.Init.SyncJumpWidth = CAN_SJW_4TQ;
-//  hcan1.Init.TimeSeg1 = CAN_BS1_16TQ;
-//  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
-//  hcan1.Init.TimeTriggeredMode = DISABLE;
-//  hcan1.Init.AutoBusOff = ENABLE;
-//  hcan1.Init.AutoWakeUp = ENABLE;
-//  hcan1.Init.AutoRetransmission = ENABLE;
-//  hcan1.Init.ReceiveFifoLocked = DISABLE;
-//  hcan1.Init.TransmitFifoPriority = DISABLE;
-//  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-//  {
-//    _Error_Handler(__FILE__, __LINE__);
-//  }
-//
-//}
-//
+void MX_CAN1_Init(void)
+{
+  /*CAN 调试时保证收发器 +5V 供电正常，收发器工作在 +5V 电压。*/
+
+  /*注意：初始化 CAN 控制器时，如果没有正确或没有接入外部 CAN 收发器，
+  初始化过程将卡死。此时需要将 CAN 模式设置为内部回环模式，
+  或正确接入 CAN 收发器*/
+
+  /* USER CODE BEGIN CAN1_Init 0 */
+
+  /* USER CODE END CAN1_Init 0 */
+
+  /* USER CODE BEGIN CAN1_Init 1 */
+
+  /* USER CODE END CAN1_Init 1 */
+  hcan1.Instance = CAN1;
+  hcan1.Init.Prescaler = PrescClK; /*42M/(16tq+4tq+1)/8=250KBps*/
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_4TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_16TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
+  hcan1.Init.TimeTriggeredMode = DISABLE;
+  hcan1.Init.AutoBusOff = ENABLE;
+  hcan1.Init.AutoWakeUp = ENABLE;
+  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.ReceiveFifoLocked = DISABLE;
+  hcan1.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  {
+   _Error_Handler(__FILE__, __LINE__);
+  }
+
+  /* USER CODE BEGIN CAN_Init 2 */
+  CAN_FilterTypeDef sFilterConfig;
+  /*Filter one (stack light blink)*/
+  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
+  if (HAL_CAN_ConfigFilter(&hcan1, 
+      &sFilterConfig) != HAL_OK)
+  {
+      /*Filter configuration Error*/
+      Error_Handler();
+  }
+
+  HAL_CAN_Start(&hcan1); /*Start CAN*/
+
+  HAL_CAN_ActivateNotification(&hcan1,
+    CAN_IT_TX_MAILBOX_EMPTY |
+    CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING |
+    /*We probably only want this*/
+    CAN_IT_RX_FIFO0_FULL | CAN_IT_RX_FIFO1_FULL |
+    CAN_IT_RX_FIFO0_OVERRUN | CAN_IT_RX_FIFO1_OVERRUN |
+    CAN_IT_WAKEUP | CAN_IT_SLEEP_ACK |
+    CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE |
+    CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE |
+    CAN_IT_ERROR);
+
+  /* Configure Transmission process */
+  TxHeader.StdId = 0x01/*canNodeId*/;
+  TxHeader.ExtId = 0x00;
+  TxHeader.RTR = CAN_RTR_DATA;
+  TxHeader.IDE = CAN_ID_STD;
+  TxHeader.DLC = 8;
+  TxHeader.TransmitGlobalTime = DISABLE;
+  /* USER CODE END CAN_Init 2 */
+}
+
 void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
 {
 
@@ -108,6 +157,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     /* CAN1 clock enable */
     __HAL_RCC_CAN1_CLK_ENABLE();
   
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**CAN1 GPIO Configuration    
     PB8     ------> CAN1_RX
     PB9     ------> CAN1_TX 
@@ -164,6 +214,87 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
 /* USER CODE BEGIN 1 */
 
+/**
+  * @brief  Add a message to the first free Tx mailbox and activate the
+  *         corresponding transmission request.
+  * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
+  *         the configuration information for the specified CAN.
+  * @param  pHeader pointer to a CAN_TxHeaderTypeDef structure.
+  * @param  aData array containing the payload of the Tx frame.
+  * @param  pTxMailbox pointer to a variable where the function will return
+  *         the TxMailbox used to store the Tx message.
+  *         This parameter can be a value of @arg CAN_Tx_Mailboxes.
+  * @retval HAL status
+  */
+void CAN_Send(CAN_TxHeaderTypeDef * pHeader, uint8_t * data)
+{
+  if (HAL_CAN_AddTxMessage(&hcan1, pHeader, 
+    data, &TxMailbox) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief  Add a message to the first free Tx mailbox and activate the
+  *         corresponding transmission request.
+  * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
+  *         the configuration information for the specified CAN.
+  * @param  pHeader pointer to a CAN_TxHeaderTypeDef structure.
+  * @param  aData array containing the payload of the Tx frame.
+  * @param  pTxMailbox pointer to a variable where the function will return
+  *         the TxMailbox used to store the Tx message.
+  *         This parameter can be a value of @arg CAN_Tx_Mailboxes.
+  * @retval HAL status
+  */
+void CAN_Set_BaudRate(uint32_t baudrate)
+{
+  HAL_CAN_Stop(&hcan1);
+  HAL_CAN_ResetError(&hcan1);
+
+  /*baudrate = 42M/(16tq+4tq+1)/PrescClK=250KBps*/
+  /*PrescClK = 42M/(16tq+4tq+1)/baudrate*/
+  PrescClK = CAN_CLK_HZ / (16+4+1) / baudrate;
+  MX_CAN1_Init();
+}
+
+/**
+  * @brief  Get an CAN frame from the Rx FIFO zone into the message RAM.
+  * @param  hcan pointer to an CAN_HandleTypeDef structure that contains
+  *         the configuration information for the specified CAN.
+  * @param  RxFifo Fifo number of the received message to be read.
+  *         This parameter can be a value of @arg CAN_receive_FIFO_number.
+  * @param  pHeader pointer to a CAN_RxHeaderTypeDef structure where the header
+  *         of the Rx frame will be stored.
+  * @param  aData array where the payload of the Rx frame will be stored.
+  * @retval HAL status
+  */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan)
+{
+  /* Get RX message */
+  if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
+  {
+    /* Reception Error */
+    Error_Handler();
+  }
+
+  /**
+   * CAN is configured in identifier masking mode, 
+   * all packets are received, and the corresponding ID packets are filtered 
+   * out in the form of software masks, which is commonly 
+   * referred to as software filtering
+   */
+
+  uint8_t id = (RxHeader.StdId >> 7); // 4Bits ID & 7Bits Msg
+  uint8_t cmd = RxHeader.StdId & 0x7F; // 4Bits ID & 7Bits Msg
+  uint8_t canNodeId = 0x01;
+
+  if (id == 0 || id == canNodeId)
+  {
+    CAN_ApplyCmd(cmd, RxData, RxHeader.DLC);
+    /*OnCanCmd(cmd, RxData, RxHeader.DLC);*/
+  }
+}
 /* USER CODE END 1 */
 
 /**

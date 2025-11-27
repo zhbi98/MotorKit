@@ -886,14 +886,16 @@ bool Encoder::update() {
         snap_to_zero_vel = true;
     }
 
-    // Outputs from Encoder for Controller（编码器输出的可供使用的位置数据）
+    // Outputs from Encoder for Controller（编码器输出给 Controller 使用的位置数据，单位 turn）
+    // pos_estimate_counts_ 是编码器实时总计数，cpr 是每圈计数（counts per revolution），
+    // 所以 pos_estimate_ 位置值的单位是“转数” (mechanical revolutions / turns)。
     pos_estimate_ = pos_estimate_counts_ / (float)config_.cpr;
     vel_estimate_ = vel_estimate_counts_ / (float)config_.cpr;
     
     // TODO: we should strictly require that this value is from the previous iteration
     // to avoid spinout scenarios. However that requires a proper way to reset
     // the encoder from error states.
-    float pos_circular = pos_circular_.any().value_or(0.0f);
+    float pos_circular = pos_circular_.any().value_or(0.0f); /*如果对象为空（不包含值），则返回传递给 value_or() 的默认值*/
     pos_circular +=  wrap_pm((pos_cpr_counts_ - pos_cpr_counts_last) / (float)config_.cpr, 1.0f);
     pos_circular = fmodf_pos(pos_circular, axis_->controller_.config_.circular_setpoint_range);
     pos_circular_ = pos_circular;
