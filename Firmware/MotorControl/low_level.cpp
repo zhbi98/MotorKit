@@ -302,7 +302,7 @@ void update_brake_current() {
     }
 
     brake_resistor_current = brake_current;
-    ibus_ += odrv.ibus_report_filter_k_ * (Ibus_sum - ibus_); /*电流滤波*/
+    ibus_ += odrv.ibus_report_filter_k_ * (Ibus_sum - ibus_); /*使用 Kalman Estimates 滤波平滑 ibus_ 电流*/
 
     /*测量母线电压不仅仅用于显示，还可以监测各种过流错误状态*/
     if (Ibus_sum > odrv.config_.dc_max_positive_current) {

@@ -24,8 +24,8 @@ CAN_TxHeaderTypeDef txHeader = {
  */
 uint32_t ODriveCAN::fto_i(float x, float x_min, float x_max, uint8_t bits)
 {
-    float span = x_max - x_min; /*���㷶Χ*/
-    float ref = x_min; /*���뷶Χ���*/
+    float span = x_max - x_min; /*浮点范围*/
+    float ref = x_min; /*输入范围起点*/
 
     if (x < x_min) x = x_min;
     else if (x > x_max) x = x_max;
@@ -109,11 +109,12 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         if (motor_id < 0 || motor_id > 1) return 0;
         Axis& axis = axes[motor_id];
 
-        /**���õ���㶨�����˶�ģʽ��������Ŀ������*/
+        /**设置电机恒定力矩运动模式，再设置目标力矩*/
         if (axis.controller_.config_.control_mode != Controller::CONTROL_MODE_TORQUE_CONTROL)
             axis.controller_.config_.control_mode = Controller::CONTROL_MODE_TORQUE_CONTROL;
         float torque_setpoint = *((float *)(&_data[1]));
         axis.controller_.input_torque_ = torque_setpoint;
+        /*当 CAN 通信中断时禁用电机。*/
         axis.watchdog_feed();
         break;
     }
@@ -123,12 +124,12 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         if (motor_id < 0 || motor_id > 1) return 0;
         Axis& axis = axes[motor_id];
 
-        /**���õ���ٶ��˶�ģʽ��������Ŀ���ٶ�*/
+        /**设置电机速度运动模式，再设置目标速度*/
         if (axis.controller_.config_.control_mode != Controller::CONTROL_MODE_VELOCITY_CONTROL)
             axis.controller_.config_.control_mode = Controller::CONTROL_MODE_VELOCITY_CONTROL;
         float vel_setpoint = *((float *)(&_data[1]));
         axis.controller_.input_vel_ = vel_setpoint;
-        axis.watchdog_feed();
+        axis.watchdog_feed(); /*当 CAN 通信中断时禁用电机。*/
         break;
     }
     case 0x05: /*Set Position SetPoint*/
@@ -137,7 +138,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         if (motor_id < 0 || motor_id > 1) return 0;
         Axis& axis = axes[motor_id];
 
-        /**���õ��λ���˶�ģʽ��������Ŀ��λ��*/
+        /**设置电机位置运动模式，再设置目标位置*/
         if (axis.controller_.config_.control_mode != Controller::CONTROL_MODE_POSITION_CONTROL)
             axis.controller_.config_.control_mode = Controller::CONTROL_MODE_POSITION_CONTROL;
         float pos_setpoint = *((float *)(&_data[1]));
@@ -155,36 +156,70 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
             CAN_Send(&txHeader, _data);
         }
 
-        axis.watchdog_feed();
+        axis.watchdog_feed(); /*当 CAN 通信中断时禁用电机。*/
     }
         break;
     case 0x06: /*Set Position with Time*/
     {
-
+        /*本质也是位置速度模式，设置时间后最终会限制迹速度确保在设定时间到达目标位置。*/
     }
         break;
     case 0x07: /*Set Position with Velocity-Limit*/
     {
+        /*即位置速度模式，在该模式速度给定是运行过程中限定的最高速度值。*/
+        /*限定运动过程中的最大绝对速度值。*/
         motor_id = _data[0];
         if (motor_id < 0 || motor_id > 1) return 0;
         Axis& axis = axes[motor_id];
 
-        /**���õ��λ���˶�ģʽ��������Ŀ��λ��*/
+        /**设置电机位置运动模式，再设置目标位置*/
         if (axis.controller_.config_.control_mode != Controller::CONTROL_MODE_POSITION_CONTROL)
             axis.controller_.config_.control_mode = Controller::CONTROL_MODE_POSITION_CONTROL;
         float pos_setpoint = *((float *)(&_data[1]));
         axis.controller_.input_pos_ = pos_setpoint;
 
-        /**�жϲ���������ȷ���Ƿ�����ٶ�����*/
-        int32_t _vel_limit = (int32_t)(*(int32_t *)(_data[5]));
-        float vel_limit = ito_f(_vel_limit, -200.0f, +200.0f, 12);
+        /**判断参数个数，确定是否包含速度限制*/
+        uint16_t _vel_limit = (uint16_t)(*(uint16_t *)(_data[5]));
+        float vel_limit = ito_f(_vel_limit, -500.0f, +500.0f, 16);
         axis.controller_.config_.vel_limit = vel_limit;
 
         /**The new rated speed needs to be synchronized to 
         the position tracker, which needs the rated 
         speed to generate the process speed.*/
         axis.controller_.input_pos_updated();
-        axis.watchdog_feed();
+        axis.watchdog_feed(); /*当 CAN 通信中断时禁用电机。*/
+    }
+        break;
+    case 0x08: /*Set Position with Velocity-Torque-Limit*/
+    {
+        /*即力位混控模式，在该模式速度给定是运行过程中限定的最高速度值。*/
+        /*力矩给定是运行过程中限定的最高力矩值。*/
+        motor_id = _data[0];
+        if (motor_id < 0 || motor_id > 1) return 0;
+        Axis& axis = axes[motor_id];
+
+        /**设置电机位置运动模式，再设置目标位置*/
+        if (axis.controller_.config_.control_mode != Controller::CONTROL_MODE_POSITION_CONTROL)
+            axis.controller_.config_.control_mode = Controller::CONTROL_MODE_POSITION_CONTROL;
+        uint16_t _pos_setpoint = *((uint16_t *)(&_data[1]));
+        float pos_setpoint = ito_f(_pos_setpoint, -500.0f, +500.0f, 16);
+        axis.controller_.input_pos_ = pos_setpoint;
+
+        /**判断参数个数，确定是否包含速度限制*/
+        uint16_t _vel_limit = (uint16_t)(*(uint16_t *)(_data[3]));
+        float vel_limit = ito_f(_vel_limit, -500.0f, +500.0f, 16);
+        axis.controller_.config_.vel_limit = vel_limit;
+
+        /**判断参数个数，确定是否包含扭矩限制*/
+        uint16_t _torque_lim = (uint16_t)(*(uint16_t *)(_data[5]));
+        float torque_lim = ito_f(_torque_lim, -500.0f, +500.0f, 16);
+        axis.motor_.config_.torque_lim = torque_lim;
+
+        /**The new rated speed needs to be synchronized to 
+        the position tracker, which needs the rated 
+        speed to generate the process speed.*/
+        axis.controller_.input_pos_updated();
+        axis.watchdog_feed(); /*当 CAN 通信中断时禁用电机。*/
     }
         break;
 
@@ -199,7 +234,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) {/*It need to be stored*/
             odrv.save_configuration();
         }
@@ -219,7 +254,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) { /*It need to be stored*/
             odrv.save_configuration();
         }
@@ -239,13 +274,13 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) { /*It need to be stored*/
             odrv.save_configuration();
         }
         break;
     }
-    case 0x14: /*Set Acceleration ��and Store to EEPROM��*/
+    case 0x14: /*Set Acceleration （and Store to EEPROM）*/
     {
         motor_id = _data[0];
         if (motor_id < 0 || motor_id > 1) return 0;
@@ -263,7 +298,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) { /*It need to be stored*/
             odrv.save_configuration();
         }
@@ -293,7 +328,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) { /*It need to be stored*/
             odrv.save_configuration();
         }
@@ -313,7 +348,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) { /*It need to be stored*/
             odrv.save_configuration();
         }
@@ -333,7 +368,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
 
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (stored && idle) { /*It need to be stored*/
             odrv.save_configuration();
         }
@@ -341,7 +376,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
 
 
     /*0x20~0x2F Inquiry CMDs*/
-    case 0x21: /*Get Current*/
+    case 0x1A: /*Get Current (Ibus)*/
     {
         motor_id = _data[0];
         if (motor_id < 0 || motor_id > 1) return 0;
@@ -349,6 +384,46 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
 
         _data[0] = motor_id;
         float Ibus = (float)axis.motor_.I_bus_;
+        uint8_t * bin = (uint8_t *)&Ibus;
+        for (int8_t i = 0; i < 4; i++) _data[i + 1] = *(bin + i);
+        /*Finished ACK*/
+        _data[5] = axis.current_state_ == Axis::AXIS_STATE_IDLE ? 1 : 0;
+        txHeader.StdId = (canNodeId << 7) | 0x21;
+        CAN_Send(&txHeader, _data);
+    }
+    case 0x20: /*Get Torque*/
+    {
+        motor_id = _data[0];
+        if (motor_id < 0 || motor_id > 1) return 0;
+        Axis& axis = axes[motor_id];
+
+        _data[0] = motor_id;
+
+        float torque = 0.0f;
+        float Iq = (float)axis.motor_.current_control_.Iq_measured_;
+
+        if (axis.motor_.config_.motor_type == Motor::MOTOR_TYPE_ACIM) {
+            /*ACIM 需要乘以 rotor_flux（已在 acim_estimator_ 中估计）*/
+            float flux = axis.acim_estimator_.rotor_flux_;
+            torque = Iq * axis.motor_.config_.torque_constant * flux; /*调整公式以匹配实际参数*/
+        } else torque = Iq * axis.motor_.config_.torque_constant;;
+
+        uint8_t * bin = (uint8_t *)&torque;
+        for (int8_t i = 0; i < 4; i++) _data[i + 1] = *(bin + i);
+        /*Finished ACK*/
+        _data[5] = axis.current_state_ == Axis::AXIS_STATE_IDLE ? 1 : 0;
+        txHeader.StdId = (canNodeId << 7) | 0x20;
+        CAN_Send(&txHeader, _data);
+    }
+        break;
+    case 0x21: /*Get Current (Iq)*/
+    {
+        motor_id = _data[0];
+        if (motor_id < 0 || motor_id > 1) return 0;
+        Axis& axis = axes[motor_id];
+
+        _data[0] = motor_id;
+        float Ibus = (float)axis.motor_.current_control_.Iq_measured_;
         uint8_t * bin = (uint8_t *)&Ibus;
         for (int8_t i = 0; i < 4; i++) _data[i + 1] = *(bin + i);
         /*Finished ACK*/
@@ -405,7 +480,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         uint8_t idle = 1;
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
-        /*�洢����ֻ��ʧ��ģʽ����Ч*/
+        /*存储参数只在失能模式下生效*/
         if (!idle) break;
         /*CONFIG_STORE;*/
         odrv.save_configuration();
@@ -416,7 +491,7 @@ bool ODriveCAN::apply_cmd(uint8_t _cmd, uint8_t * _data, uint32_t _len)
         uint8_t idle = 1;
         for (auto& axis: axes) idle &= (
             axis.current_state_ == Axis::AXIS_STATE_IDLE) ? 1 : 0;
-        /*��������ֻ��ʧ��ģʽ����Ч*/
+        /*擦除参数只在失能模式下生效*/
         if (!idle) break;
         /*CONFIG_RESTORE;*/
         odrv.erase_configuration();

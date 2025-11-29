@@ -145,6 +145,8 @@ ODriveIntf::MotorIntf::Error FieldOrientedController::get_alpha_beta_output(
         这个坐标系下两个控制变量都被线性化了*/
         Id_measured_ += I_measured_report_filter_k_ * (Idq->first - Id_measured_);
         Iq_measured_ += I_measured_report_filter_k_ * (Idq->second - Iq_measured_);
+        /*相电流测量 Id_measured_, Iq_measured_ 使用 Kalman Estimates 滤波平滑后提供
+        给外部查询，例如实现电流/力矩反馈，从而达到力控效果。*/
     } else {
         Id_measured_ = 0.0f;
         Iq_measured_ = 0.0f;
@@ -173,8 +175,8 @@ ODriveIntf::MotorIntf::Error FieldOrientedController::get_alpha_beta_output(
         auto [Id, Iq] = *Idq;
         auto [Id_setpoint, Iq_setpoint] = *Idq_setpoint_; /*来自 Motor 类对象的设定参数*/
 
-        float Ierr_d = Id_setpoint - Id;
-        float Ierr_q = Iq_setpoint - Iq;
+        float Ierr_d = Id_setpoint - Id; /*期望扭矩电流 Id_setpoint 和实测电流 Id 之差*/
+        float Ierr_q = Iq_setpoint - Iq; /*期望扭矩电流 Iq_setpoint 和实测电流 Iq 之差*/
 
         // 电流闭环控制，这部分计算是 PI 电流控制器的输出，基于 Id 和 Iq 的 PI 控制（这里才是真正的电流/力矩环实现）。
         // Apply PI control (V{d,q}_setpoint act as feed-forward terms in this mode)

@@ -162,6 +162,7 @@ bool Axis::do_checks(uint32_t timestamp) {
 // @brief Feed the watchdog to prevent watchdog timeouts.
 void Axis::watchdog_feed() {
     /*返回的是一个固定值（例如 1000），代表你设定的容忍超时周期数。*/
+    /*看门狗定时器可以作为一种安全功能，例如当 CAN 通信中断时禁用电机。*/
     watchdog_current_value_ = get_watchdog_reset();
 }
 

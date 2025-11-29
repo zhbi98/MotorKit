@@ -20,9 +20,9 @@ ThermistorCurrentLimiter::ThermistorCurrentLimiter(uint16_t adc_channel,
 
 void ThermistorCurrentLimiter::update() {
     const float normalized_voltage = get_adc_relative_voltage_ch(adc_channel_);
-    /*horner_poly_eval ÊµÏÖÁË »ôÄÉ·¨£¨Horner's Method£© À´¸ßĞ§µØ¼ÆËã¶àÏîÊ½µÄÖµ£¬ÓÃÓÚÎÂ¶È²¹³¥ÇúÏßÄâºÏ£¬
-    ¸ù¾İÎÂ¶È²é±íÄâºÏ³öµç×è±ä»¯ÇúÏß£¬x ¶àÏîÊ½±äÁ¿µÄÖµ£¨ÊäÈë£©£¬coeffs ÏµÊıÊı×é£¬coeffs[0] ÊÇ×î¸ß´ÎÏîµÄÏµÊı£¬
-    count ÏµÊı¸öÊı£¬Ò²µÈÓÚ¶àÏîÊ½µÄ´ÎÊı + 1£¨¼´ degree + 1£©¡£*/
+    /*horner_poly_eval å®ç°äº† éœçº³æ³•ï¼ˆHorner's Methodï¼‰ æ¥é«˜æ•ˆåœ°è®¡ç®—å¤šé¡¹å¼çš„å€¼ï¼Œç”¨äºæ¸©åº¦è¡¥å¿æ›²çº¿æ‹Ÿåˆï¼Œ
+    æ ¹æ®æ¸©åº¦æŸ¥è¡¨æ‹Ÿåˆå‡ºç”µé˜»å˜åŒ–æ›²çº¿ï¼Œx å¤šé¡¹å¼å˜é‡çš„å€¼ï¼ˆè¾“å…¥ï¼‰ï¼Œcoeffs ç³»æ•°æ•°ç»„ï¼Œcoeffs[0] æ˜¯æœ€é«˜æ¬¡é¡¹çš„ç³»æ•°ï¼Œ
+    count ç³»æ•°ä¸ªæ•°ï¼Œä¹Ÿç­‰äºå¤šé¡¹å¼çš„æ¬¡æ•° + 1ï¼ˆå³ degree + 1ï¼‰ã€‚*/
     float raw_temperature_ = horner_poly_eval(normalized_voltage, coefficients_, num_coeffs_);
 
     constexpr float tau = 0.1f; // [sec]

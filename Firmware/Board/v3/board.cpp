@@ -414,7 +414,7 @@ void TIM8_UP_TIM13_IRQHandler(void) {
         // tasks when TIM8 is counting up（编码器采样）.
         odrv.sampling_cb();
         /*这里触发软中断进入 ControlLoop_IRQHandler 中断函数，
-        底层控制都是在这个函数中完成的*/
+        底层控制都是在这个函数中完成的（电机高频电流环通常10kHz-30kHz）*/
         NVIC->STIR = ControlLoop_IRQn;
     } else {
         // Tentatively reset all PWM outputs to 50% duty cycles. 

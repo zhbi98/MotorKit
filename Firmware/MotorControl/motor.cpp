@@ -642,7 +642,7 @@ void Motor::update(uint32_t timestamp) {
     if (axis_->motor_.config_.motor_type == Motor::MOTOR_TYPE_ACIM) {
         iq = torque / (axis_->motor_.config_.torque_constant * std::max(axis_->acim_estimator_.rotor_flux_, config_.acim_gain_min_flux));
     } else {
-        iq = torque / axis_->motor_.config_.torque_constant;
+        iq = torque / axis_->motor_.config_.torque_constant; /*目标扭矩 (Nm) 除以扭矩常数(Nm/A)得到扭矩目标电流*/
     }
 
     // 2-norm clamping where Id takes priority（当 d 轴电流 id 确定后，iq 的最大允许值由 
